@@ -104,6 +104,14 @@ func New() *PocketBase {
 		pb.mysqlDsnEnv,
 	)}
 
+	// hide the default help command (allow only `--help` flag)
+	pb.RootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
+
+	// hook the bootstrap process
+	pb.RootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		return pb.Bootstrap()
+	}
+
 	return pb
 }
 
@@ -153,10 +161,6 @@ func (pb *PocketBase) Start() error {
 // This method differs from pb.Start() by not registering the default
 // system commands!
 func (pb *PocketBase) Execute() error {
-	if err := pb.Bootstrap(); err != nil {
-		return err
-	}
-
 	var wg sync.WaitGroup
 
 	wg.Add(1)
