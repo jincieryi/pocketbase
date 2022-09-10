@@ -11,14 +11,18 @@ func TestNewBaseApp(t *testing.T) {
 	const testDataDir = "./pb_base_app_test_data_dir/"
 	defer os.RemoveAll(testDataDir)
 
-	app := NewBaseApp(testDataDir, "test_env", true)
+	app := NewBaseApp(testDataDir, "test_env", true, "test_dsn_env")
 
 	if app.dataDir != testDataDir {
 		t.Fatalf("expected dataDir %q, got %q", testDataDir, app.dataDir)
 	}
 
 	if app.encryptionEnv != "test_env" {
-		t.Fatalf("expected encryptionEnv test_env, got %q", app.dataDir)
+		t.Fatalf("expected encryptionEnv test_env, got %q", app.encryptionEnv)
+	}
+
+	if app.mysqlDsnEnv != "test_dsn_env" {
+		t.Fatalf("expected encryptionEnv test_dsn_env, got %q", app.mysqlDsnEnv)
 	}
 
 	if !app.isDebug {
@@ -42,7 +46,80 @@ func TestBaseAppBootstrap(t *testing.T) {
 	const testDataDir = "./pb_base_app_test_data_dir/"
 	defer os.RemoveAll(testDataDir)
 
-	app := NewBaseApp(testDataDir, "pb_test_env", false)
+	app := NewBaseApp(testDataDir, "pb_test_env", false, "test_dsn_env")
+	defer app.ResetBootstrapState()
+
+	// bootstrap
+	if err := app.Bootstrap(); err != nil {
+		t.Fatal(err)
+	}
+
+	if stat, err := os.Stat(testDataDir); err != nil || !stat.IsDir() {
+		t.Fatal("Expected test data directory to be created.")
+	}
+
+	if app.dao == nil {
+		t.Fatal("Expected app.dao to be initialized, got nil.")
+	}
+
+	if app.dao.BeforeCreateFunc == nil {
+		t.Fatal("Expected app.dao.BeforeCreateFunc to be set, got nil.")
+	}
+
+	if app.dao.AfterCreateFunc == nil {
+		t.Fatal("Expected app.dao.AfterCreateFunc to be set, got nil.")
+	}
+
+	if app.dao.BeforeUpdateFunc == nil {
+		t.Fatal("Expected app.dao.BeforeUpdateFunc to be set, got nil.")
+	}
+
+	if app.dao.AfterUpdateFunc == nil {
+		t.Fatal("Expected app.dao.AfterUpdateFunc to be set, got nil.")
+	}
+
+	if app.dao.BeforeDeleteFunc == nil {
+		t.Fatal("Expected app.dao.BeforeDeleteFunc to be set, got nil.")
+	}
+
+	if app.dao.AfterDeleteFunc == nil {
+		t.Fatal("Expected app.dao.AfterDeleteFunc to be set, got nil.")
+	}
+
+	if app.logsDao == nil {
+		t.Fatal("Expected app.logsDao to be initialized, got nil.")
+	}
+
+	if app.settings == nil {
+		t.Fatal("Expected app.settings to be initialized, got nil.")
+	}
+
+	// reset
+	if err := app.ResetBootstrapState(); err != nil {
+		t.Fatal(err)
+	}
+
+	if app.dao != nil {
+		t.Fatalf("Expected app.dao to be nil, got %v.", app.dao)
+	}
+
+	if app.logsDao != nil {
+		t.Fatalf("Expected app.logsDao to be nil, got %v.", app.logsDao)
+	}
+
+	if app.settings != nil {
+		t.Fatalf("Expected app.settings to be nil, got %v.", app.settings)
+	}
+}
+
+func TestBaseAppBootstrapUseMysql(t *testing.T) {
+	os.Setenv("test_dsn_env", "root:root@tcp(1.117.39.176:3306)/pb_test")
+	defer func() { os.Unsetenv("test_dsn_env") }()
+
+	const testDataDir = "./pb_base_app_test_data_dir/"
+	defer os.RemoveAll(testDataDir)
+
+	app := NewBaseApp(testDataDir, "pb_test_env", false, "test_dsn_env")
 	defer app.ResetBootstrapState()
 
 	// bootstrap
@@ -112,7 +189,7 @@ func TestBaseAppGetters(t *testing.T) {
 	const testDataDir = "./pb_base_app_test_data_dir/"
 	defer os.RemoveAll(testDataDir)
 
-	app := NewBaseApp(testDataDir, "pb_test_env", false)
+	app := NewBaseApp(testDataDir, "pb_test_env", false, "test_dsn_env")
 	defer app.ResetBootstrapState()
 
 	if err := app.Bootstrap(); err != nil {
@@ -141,6 +218,10 @@ func TestBaseAppGetters(t *testing.T) {
 
 	if app.encryptionEnv != app.EncryptionEnv() {
 		t.Fatalf("Expected app.EncryptionEnv %v, got %v", app.EncryptionEnv(), app.encryptionEnv)
+	}
+
+	if app.mysqlDsnEnv != app.MysqlDsnEnv() {
+		t.Fatalf("Expected app.MysqlDsnEnv %v, got %v", app.MysqlDsnEnv(), app.mysqlDsnEnv)
 	}
 
 	if app.isDebug != app.IsDebug() {
@@ -400,7 +481,7 @@ func TestBaseAppNewMailClient(t *testing.T) {
 	const testDataDir = "./pb_base_app_test_data_dir/"
 	defer os.RemoveAll(testDataDir)
 
-	app := NewBaseApp(testDataDir, "pb_test_env", false)
+	app := NewBaseApp(testDataDir, "pb_test_env", false, "test_dsn_env")
 
 	client1 := app.NewMailClient()
 	if val, ok := client1.(*mailer.Sendmail); !ok {
@@ -419,7 +500,7 @@ func TestBaseAppNewFilesystem(t *testing.T) {
 	const testDataDir = "./pb_base_app_test_data_dir/"
 	defer os.RemoveAll(testDataDir)
 
-	app := NewBaseApp(testDataDir, "pb_test_env", false)
+	app := NewBaseApp(testDataDir, "pb_test_env", false, "test_dsn_env")
 
 	// local
 	local, localErr := app.NewFilesystem()

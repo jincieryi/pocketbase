@@ -38,11 +38,13 @@ type PocketBase struct {
 	debugFlag     bool
 	dataDirFlag   string
 	encryptionEnv string
+	mysqlDsnEnv   string
 
 	// console flag fallback values
 	defaultDebug         bool
 	defaultDataDir       string
 	defaultEncryptionEnv string
+	defaultMysqlDsnEnv   string
 
 	// serve start banner
 	showStartBanner bool
@@ -87,6 +89,7 @@ func New() *PocketBase {
 		defaultDebug:         withGoRun,
 		defaultDataDir:       defaultDir,
 		defaultEncryptionEnv: "",
+		defaultMysqlDsnEnv:   "",
 		showStartBanner:      true,
 	}
 
@@ -98,6 +101,7 @@ func New() *PocketBase {
 		pb.dataDirFlag,
 		pb.encryptionEnv,
 		pb.debugFlag,
+		pb.mysqlDsnEnv,
 	)}
 
 	return pb
@@ -118,6 +122,12 @@ func (pb *PocketBase) DefaultDataDir(val string) *PocketBase {
 // DefaultEncryptionEnv sets the default --encryptionEnv flag value.
 func (pb *PocketBase) DefaultEncryptionEnv(val string) *PocketBase {
 	pb.defaultEncryptionEnv = val
+	return pb
+}
+
+// DefaultMysqlDsnEnv sets the default --mysqlDsnEnv flag value.
+func (pb *PocketBase) DefaultMysqlDsnEnv(val string) *PocketBase {
+	pb.defaultMysqlDsnEnv = val
 	return pb
 }
 
@@ -200,6 +210,13 @@ func (pb *PocketBase) eagerParseFlags() error {
 		"debug",
 		pb.defaultDebug,
 		"enable debug mode, aka. showing more detailed logs",
+	)
+
+	pb.RootCmd.PersistentFlags().StringVar(
+		&pb.mysqlDsnEnv,
+		"mysqlDsnEnv",
+		pb.defaultMysqlDsnEnv,
+		"the env variable whose Mysql DSN(Data source name) will be used \nfor starting the pocketbase with mysql (default none,the pocketbase will start with sqlite )",
 	)
 
 	return pb.RootCmd.ParseFlags(os.Args[1:])

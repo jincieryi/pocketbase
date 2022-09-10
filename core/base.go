@@ -30,6 +30,7 @@ type BaseApp struct {
 	isDebug       bool
 	dataDir       string
 	encryptionEnv string
+	mysqlDsnEnv   string
 
 	// internals
 	cache               *store.Store[any]
@@ -126,11 +127,12 @@ type BaseApp struct {
 // configured with the provided arguments.
 //
 // To initialize the app, you need to call `app.Bootsrap()`.
-func NewBaseApp(dataDir string, encryptionEnv string, isDebug bool) *BaseApp {
+func NewBaseApp(dataDir string, encryptionEnv string, isDebug bool, mysqlDsnEnv string) *BaseApp {
 	app := &BaseApp{
 		dataDir:             dataDir,
 		isDebug:             isDebug,
 		encryptionEnv:       encryptionEnv,
+		mysqlDsnEnv:         mysqlDsnEnv,
 		cache:               store.New[any](nil),
 		settings:            NewSettings(),
 		subscriptionsBroker: subscriptions.NewBroker(),
@@ -301,6 +303,12 @@ func (app *BaseApp) DataDir() string {
 // (used for settings encryption).
 func (app *BaseApp) EncryptionEnv() string {
 	return app.encryptionEnv
+}
+
+// MysqlDsnEnv returns the name of the dns(Data source name)
+// sample set env `export mysqlDsn = root:root@tcp(1.117.39.176:3306)/pb_test`
+func (app *BaseApp) MysqlDsnEnv() string {
+	return app.mysqlDsnEnv
 }
 
 // IsDebug returns whether the app is in debug mode
@@ -711,7 +719,13 @@ func (app *BaseApp) OnCollectionsAfterImportRequest() *hook.Hook[*CollectionsImp
 
 func (app *BaseApp) initLogsDB() error {
 	var connectErr error
-	app.logsDB, connectErr = connectDB(filepath.Join(app.DataDir(), "logs.db"))
+
+	if app.mysqlDsnEnv != "" && os.Getenv(app.mysqlDsnEnv) != "" {
+		app.logsDB, connectErr = connectMysqlDB(os.Getenv(app.mysqlDsnEnv))
+	} else {
+		app.logsDB, connectErr = connectDB(filepath.Join(app.DataDir(), "logs.db"))
+	}
+
 	if connectErr != nil {
 		return connectErr
 	}
@@ -723,7 +737,13 @@ func (app *BaseApp) initLogsDB() error {
 
 func (app *BaseApp) initDataDB() error {
 	var connectErr error
-	app.db, connectErr = connectDB(filepath.Join(app.DataDir(), "data.db"))
+
+	if app.mysqlDsnEnv != "" && os.Getenv(app.mysqlDsnEnv) != "" {
+		app.db, connectErr = connectMysqlDB(os.Getenv(app.mysqlDsnEnv))
+	} else {
+		app.db, connectErr = connectDB(filepath.Join(app.DataDir(), "data.db"))
+	}
+
 	if connectErr != nil {
 		return connectErr
 	}

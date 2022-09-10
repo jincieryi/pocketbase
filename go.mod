@@ -11,6 +11,7 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.1
 	github.com/ganigeorgiev/fexpr v0.1.1
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
+	github.com/go-sql-driver/mysql v1.6.0
 	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/labstack/echo/v5 v5.0.0-20220201181537-ed2888cfa198
 	github.com/mattn/go-sqlite3 v1.14.15

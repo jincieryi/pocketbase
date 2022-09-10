@@ -42,6 +42,10 @@ type App interface {
 	// (used for settings encryption).
 	EncryptionEnv() string
 
+	// MysqlDsnEnv returns the name of the dns(Data source name)
+	// sample set env `export mysqlDsn = root:root@tcp(1.117.39.176:3306)/pb_test`
+	MysqlDsnEnv() string
+
 	// IsDebug returns whether the app is in debug mode
 	// (showing more detailed error logs, executed sql statements, etc.).
 	IsDebug() bool
