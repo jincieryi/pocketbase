@@ -95,15 +95,22 @@ type migrationsConnection struct {
 }
 
 func migrationsConnectionsMap(app core.App) map[string]migrationsConnection {
-	return map[string]migrationsConnection{
-		"db": {
-			DB:             app.DB(),
-			MigrationsList: migrations.AppMigrations,
-		},
-		"logs": {
-			DB:             app.LogsDB(),
-			MigrationsList: logs.LogsMigrations,
-		},
+	if app.MysqlDsnEnv() != "" {
+		return map[string]migrationsConnection{
+			"db":   {},
+			"logs": {},
+		}
+	} else {
+		return map[string]migrationsConnection{
+			"db": {
+				DB:             app.DB(),
+				MigrationsList: migrations.AppMigrations,
+			},
+			"logs": {
+				DB:             app.LogsDB(),
+				MigrationsList: logs.LogsMigrations,
+			},
+		}
 	}
 }
 
