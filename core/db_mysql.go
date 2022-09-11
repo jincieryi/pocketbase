@@ -7,9 +7,7 @@ import (
 )
 
 func connectMysqlDB(mysqlDsn string) (*dbx.DB, error) {
-	pragmas := "" // TODO 补充mysql连接配置参数
-
+	pragmas := "multiStatements=true"
 	db, openErr := dbx.MustOpen("mysql", fmt.Sprintf("%s?%s", mysqlDsn, pragmas))
-
 	return db, openErr
 }
