@@ -6,16 +6,22 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	testDir := "./pb_test_data_dir"
-	defer os.RemoveAll(testDir)
+	// copy os.Args
+	originalArgs := []string{}
+	copy(originalArgs, os.Args)
+	defer func() {
+		// restore os.Args
+		copy(os.Args, originalArgs)
+	}()
 
-	// reset os.Args
+	// change os.Args
 	os.Args = os.Args[0:1]
 	os.Args = append(
 		os.Args,
-		"--dir="+testDir,
+		"--dir=test_dir",
 		"--encryptionEnv=test_encryption_env",
 		"--debug=true",
+		"--mysqlDsnEnv=test_dsn_env",
 	)
 
 	app := New()
@@ -32,65 +38,122 @@ func TestNew(t *testing.T) {
 		t.Fatal("Expected appWrapper to be initialized, got nil")
 	}
 
-	if app.DataDir() != testDir {
-		t.Fatalf("Expected app.DataDir() %q, got %q", testDir, app.DataDir())
+	if app.DataDir() != "test_dir" {
+		t.Fatalf("Expected app.DataDir() %q, got %q", "test_dir", app.DataDir())
 	}
 
 	if app.EncryptionEnv() != "test_encryption_env" {
-		t.Fatalf("Expected app.DataDir() test_encryption_env, got %q", app.EncryptionEnv())
+		t.Fatalf("Expected app.EncryptionEnv() test_encryption_env, got %q", app.EncryptionEnv())
 	}
 
 	if app.IsDebug() != true {
 		t.Fatal("Expected app.IsDebug() true, got false")
 	}
-}
 
-func TestDefaultDebug(t *testing.T) {
-	app := New()
-
-	app.DefaultDebug(true)
-	if app.defaultDebug != true {
-		t.Fatalf("Expected defaultDebug %v, got %v", true, app.defaultDebug)
-	}
-
-	app.DefaultDebug(false)
-	if app.defaultDebug != false {
-		t.Fatalf("Expected defaultDebug %v, got %v", false, app.defaultDebug)
+	if app.MysqlDsnEnv() != "test_dsn_env" {
+		t.Fatalf("Expected app.MysqlDsnEnv() test_dsn_env, got %q", app.MysqlDsnEnv())
 	}
 }
 
-func TestDefaultDataDir(t *testing.T) {
-	app := New()
+func TestNewWithConfig(t *testing.T) {
+	app := NewWithConfig(Config{
+		DefaultDebug:         true,
+		DefaultDataDir:       "test_dir",
+		DefaultEncryptionEnv: "test_encryption_env",
+		HideStartBanner:      true,
+		DefaultMysqlDsnEnv:   "test_dsn_env",
+	})
 
-	expected := "test_default"
-
-	app.DefaultDataDir(expected)
-	if app.defaultDataDir != expected {
-		t.Fatalf("Expected defaultDataDir %v, got %v", expected, app.defaultDataDir)
+	if app == nil {
+		t.Fatal("Expected initialized PocketBase instance, got nil")
 	}
+
+	if app.RootCmd == nil {
+		t.Fatal("Expected RootCmd to be initialized, got nil")
+	}
+
+	if app.appWrapper == nil {
+		t.Fatal("Expected appWrapper to be initialized, got nil")
+	}
+
+	if app.hideStartBanner != true {
+		t.Fatal("Expected app.hideStartBanner to be true, got false")
+	}
+
+	if app.DataDir() != "test_dir" {
+		t.Fatalf("Expected app.DataDir() %q, got %q", "test_dir", app.DataDir())
+	}
+
+	if app.EncryptionEnv() != "test_encryption_env" {
+		t.Fatalf("Expected app.EncryptionEnv() test_encryption_env, got %q", app.EncryptionEnv())
+	}
+
+	if app.MysqlDsnEnv() != "test_dsn_env" {
+		t.Fatalf("Expected app.MysqlDsnEnv() test_dsn_env, got %q", app.MysqlDsnEnv())
+	}
+
+	if app.IsDebug() != true {
+		t.Fatal("Expected app.IsDebug() true, got false")
+	}
+
 }
 
-func TestDefaultEncryptionEnv(t *testing.T) {
-	app := New()
+func TestNewWithConfigAndFlags(t *testing.T) {
+	// copy os.Args
+	originalArgs := []string{}
+	copy(originalArgs, os.Args)
+	defer func() {
+		// restore os.Args
+		copy(os.Args, originalArgs)
+	}()
 
-	expected := "test_env"
+	// change os.Args
+	os.Args = os.Args[0:1]
+	os.Args = append(
+		os.Args,
+		"--dir=test_dir_flag",
+		"--encryptionEnv=test_encryption_env_flag",
+		"--debug=false",
+		"--mysqlDsnEnv=test_dsn_env",
+	)
 
-	app.DefaultEncryptionEnv(expected)
-	if app.defaultEncryptionEnv != expected {
-		t.Fatalf("Expected defaultEncryptionEnv %v, got %v", expected, app.defaultEncryptionEnv)
+	app := NewWithConfig(Config{
+		DefaultDebug:         true,
+		DefaultDataDir:       "test_dir",
+		DefaultEncryptionEnv: "test_encryption_env",
+		HideStartBanner:      true,
+		DefaultMysqlDsnEnv:   "test_mysql_dsn_env",
+	})
+
+	if app == nil {
+		t.Fatal("Expected initialized PocketBase instance, got nil")
 	}
-}
 
-func TestShowStartBanner(t *testing.T) {
-	app := New()
-
-	app.ShowStartBanner(true)
-	if app.showStartBanner != true {
-		t.Fatalf("Expected showStartBanner %v, got %v", true, app.showStartBanner)
+	if app.RootCmd == nil {
+		t.Fatal("Expected RootCmd to be initialized, got nil")
 	}
 
-	app.ShowStartBanner(false)
-	if app.showStartBanner != false {
-		t.Fatalf("Expected showStartBanner %v, got %v", false, app.showStartBanner)
+	if app.appWrapper == nil {
+		t.Fatal("Expected appWrapper to be initialized, got nil")
+	}
+
+	if app.hideStartBanner != true {
+		t.Fatal("Expected app.hideStartBanner to be true, got false")
+	}
+
+	if app.DataDir() != "test_dir_flag" {
+		t.Fatalf("Expected app.DataDir() %q, got %q", "test_dir_flag", app.DataDir())
+	}
+
+	if app.EncryptionEnv() != "test_encryption_env_flag" {
+		t.Fatalf("Expected app.DataDir() %q, got %q", "test_encryption_env_flag", app.EncryptionEnv())
+	}
+
+	if app.IsDebug() != false {
+		t.Fatal("Expected app.IsDebug() false, got true")
+	}
+
+	if app.MysqlDsnEnv() != "test_dsn_env" {
+		t.Fatalf("Expected app.MysqlDsnEnv() %q, got %q", "test_dsn_env", app.MysqlDsnEnv())
 	}
 }
