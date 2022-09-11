@@ -16,7 +16,6 @@ func TestNew(t *testing.T) {
 		"--dir="+testDir,
 		"--encryptionEnv=test_encryption_env",
 		"--debug=true",
-		"--mysqlDsnEnv=test_dsn_env",
 	)
 
 	app := New()
@@ -38,11 +37,7 @@ func TestNew(t *testing.T) {
 	}
 
 	if app.EncryptionEnv() != "test_encryption_env" {
-		t.Fatalf("Expected app.EncryptionEnv() test_encryption_env, got %q", app.EncryptionEnv())
-	}
-
-	if app.MysqlDsnEnv() != "test_dsn_env" {
-		t.Fatalf("Expected app.MysqlDsnEnv() test_dsn_env, got %q", app.MysqlDsnEnv())
+		t.Fatalf("Expected app.DataDir() test_encryption_env, got %q", app.EncryptionEnv())
 	}
 
 	if app.IsDebug() != true {
@@ -83,17 +78,6 @@ func TestDefaultEncryptionEnv(t *testing.T) {
 	app.DefaultEncryptionEnv(expected)
 	if app.defaultEncryptionEnv != expected {
 		t.Fatalf("Expected defaultEncryptionEnv %v, got %v", expected, app.defaultEncryptionEnv)
-	}
-}
-
-func TestDefaultMysqlDsnEnv(t *testing.T) {
-	app := New()
-
-	expected := "test_env"
-
-	app.DefaultMysqlDsnEnv(expected)
-	if app.defaultMysqlDsnEnv != expected {
-		t.Fatalf("Expected defaultMysqlDsnEnv %v, got %v", expected, app.defaultMysqlDsnEnv)
 	}
 }
 
