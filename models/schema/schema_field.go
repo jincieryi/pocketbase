@@ -3,6 +3,7 @@ package schema
 import (
 	"encoding/json"
 	"errors"
+	"github.com/pocketbase/pocketbase/global"
 	"regexp"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
@@ -86,16 +87,30 @@ type SchemaField struct {
 
 // ColDefinition returns the field db column type definition as string.
 func (f *SchemaField) ColDefinition() string {
-	switch f.Type {
-	case FieldTypeNumber:
-		return "REAL DEFAULT 0"
-	case FieldTypeBool:
-		return "Boolean DEFAULT FALSE"
-	case FieldTypeJson:
-		return "JSON DEFAULT NULL"
-	default:
-		return "TEXT DEFAULT ''"
+	if global.DB_TYPE == "mysql" {
+		switch f.Type {
+		case FieldTypeNumber:
+			return "Integer DEFAULT 0"
+		case FieldTypeBool:
+			return "TINYINT DEFAULT 0 NOT NULL"
+		case FieldTypeJson:
+			return "JSON"
+		default:
+			return "VARCHAR(100) DEFAULT ''"
+		}
+	} else {
+		switch f.Type {
+		case FieldTypeNumber:
+			return "REAL DEFAULT 0"
+		case FieldTypeBool:
+			return "Boolean DEFAULT FALSE"
+		case FieldTypeJson:
+			return "JSON DEFAULT NULL"
+		default:
+			return "TEXT DEFAULT ''"
+		}
 	}
+
 }
 
 // String serializes and returns the current field as string.

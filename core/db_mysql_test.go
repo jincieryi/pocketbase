@@ -25,7 +25,7 @@ func TestCreateTable(t *testing.T) {
 		color.HiBlack("[%.2fms] %v\n", float64(t.Milliseconds()), sql)
 	}
 
-	result, err := db.NewQuery(`
+	_, err = db.NewQuery(`
 
 			CREATE TABLE IF NOT EXISTS {{_admins}} (
 				[[id]]              VARCHAR(100) PRIMARY KEY,
@@ -78,6 +78,28 @@ func TestCreateTable(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	println(result)
+	_, err = db.NewQuery(`
+			CREATE TABLE IF NOT EXISTS {{_requests}} (
+				[[id]]        VARCHAR(100) PRIMARY KEY,
+				[[url]]       VARCHAR(100) DEFAULT "" NOT NULL,
+				[[method]]    VARCHAR(100) DEFAULT "get" NOT NULL,
+				[[status]]    INTEGER DEFAULT 200 NOT NULL,
+				[[auth]]      VARCHAR(100) DEFAULT "guest" NOT NULL,
+				[[ip]]        VARCHAR(100) DEFAULT "127.0.0.1" NOT NULL,
+				[[referer]]   VARCHAR(100) DEFAULT "" NOT NULL,
+				[[userAgent]] VARCHAR(100) DEFAULT "" NOT NULL,
+				[[meta]]      JSON NOT NULL,
+				[[created]]   VARCHAR(100) DEFAULT "" NOT NULL,
+				[[updated]]   VARCHAR(100) DEFAULT "" NOT NULL
+			);
+			-- CREATE INDEX _request_status_idx on {{_requests}} ([[status]]);
+			-- CREATE INDEX _request_auth_idx on {{_requests}} ([[auth]]);
+			-- CREATE INDEX _request_ip_idx on {{_requests}} ([[ip]]);
+			-- TODO CREATE INDEX _request_created_hour_idx on {{_requests}} (DATA_FORMAT('%Y-%m-%d %H:00:00',[[created]]));
+		`).Execute()
+
+	if err != nil {
+		t.Fatal(err)
+	}
 
 }

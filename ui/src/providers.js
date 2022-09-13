@@ -28,4 +28,8 @@ export default {
         title: "Discord",
         icon:  "ri-discord-fill",
     },
+    weChart:{
+        title: "WeChart",
+        icon:"ri-wechat-fill"
+    }
 };
