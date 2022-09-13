@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"github.com/pocketbase/pocketbase/global"
 	"log"
 	"os"
 	"path/filepath"
@@ -740,6 +741,7 @@ func (app *BaseApp) initDataDB() error {
 
 	if app.mysqlDsnEnv != "" && os.Getenv(app.mysqlDsnEnv) != "" {
 		app.db, connectErr = connectMysqlDB(os.Getenv(app.mysqlDsnEnv))
+		global.DB_TYPE = "mysql"
 	} else {
 		app.db, connectErr = connectDB(filepath.Join(app.DataDir(), "data.db"))
 	}
@@ -751,12 +753,20 @@ func (app *BaseApp) initDataDB() error {
 	app.db.QueryLogFunc = func(ctx context.Context, t time.Duration, sql string, rows *sql.Rows, err error) {
 		if app.IsDebug() {
 			color.HiBlack("[%.2fms] %v\n", float64(t.Milliseconds()), sql)
+
+			if err != nil {
+				color.HiRed(err.Error())
+			}
 		}
 	}
 
 	app.db.ExecLogFunc = func(ctx context.Context, t time.Duration, sql string, result sql.Result, err error) {
 		if app.IsDebug() {
 			color.HiBlack("[%.2fms] %v\n", float64(t.Milliseconds()), sql)
+
+			if err != nil {
+				color.HiRed(err.Error())
+			}
 		}
 	}
 

@@ -1,8 +1,14 @@
 package core
 
 import (
+	"context"
+	"database/sql"
+	"github.com/fatih/color"
+	"github.com/pocketbase/dbx"
+	"github.com/pocketbase/pocketbase/daos"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/pocketbase/pocketbase/tools/mailer"
 )
@@ -166,6 +172,32 @@ func TestBaseAppBootstrapUseMysql(t *testing.T) {
 	if app.settings == nil {
 		t.Fatal("Expected app.settings to be initialized, got nil.")
 	}
+	app.db.ExecLogFunc = func(ctx context.Context, t time.Duration, sql string, result sql.Result, err error) {
+		color.HiBlack("[%.2fms] %v\n", float64(t.Milliseconds()), sql)
+		if err != nil {
+			color.HiRed(err.Error())
+		}
+
+	}
+	app.dao.RunInTransaction(func(txDao *daos.Dao) error {
+		_, err := txDao.DB().Insert("_params", dbx.Params{
+			"id":      "testid",
+			"key":     "testkey",
+			"value":   "{}",
+			"created": "1",
+			"updated": "1",
+		}).Execute()
+
+		//创建表失败 NB DDL隐氏提交事务
+		_, err = txDao.DB().CreateTable("test2", nil).Execute()
+
+		return err
+	})
+
+	param, _ := app.dao.FindParamByKey("testkey")
+	if param != nil {
+		t.Fatal("事物回滚失败")
+	}
 
 	// reset
 	if err := app.ResetBootstrapState(); err != nil {
@@ -183,6 +215,7 @@ func TestBaseAppBootstrapUseMysql(t *testing.T) {
 	if app.settings != nil {
 		t.Fatalf("Expected app.settings to be nil, got %v.", app.settings)
 	}
+
 }
 
 func TestBaseAppGetters(t *testing.T) {

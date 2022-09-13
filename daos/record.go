@@ -3,6 +3,7 @@ package daos
 import (
 	"errors"
 	"fmt"
+	"github.com/pocketbase/pocketbase/global"
 	"strings"
 
 	"github.com/pocketbase/dbx"
@@ -278,10 +279,15 @@ func (dao *Dao) DeleteRecord(record *models.Record) error {
 func (dao *Dao) SyncRecordTableSchema(newCollection *models.Collection, oldCollection *models.Collection) error {
 	// create
 	if oldCollection == nil {
-		cols := map[string]string{
-			schema.ReservedFieldNameId:      "TEXT PRIMARY KEY",
-			schema.ReservedFieldNameCreated: `TEXT DEFAULT "" NOT NULL`,
-			schema.ReservedFieldNameUpdated: `TEXT DEFAULT "" NOT NULL`,
+		cols := make(map[string]string)
+		if global.DB_TYPE == "mysql" {
+			cols[schema.ReservedFieldNameId] = "VARCHAR(100) PRIMARY KEY"
+			cols[schema.ReservedFieldNameCreated] = `VARCHAR(100) DEFAULT "" NOT NULL`
+			cols[schema.ReservedFieldNameUpdated] = `VARCHAR(100) DEFAULT "" NOT NULL`
+		} else {
+			cols[schema.ReservedFieldNameId] = "TEXT PRIMARY KEY"
+			cols[schema.ReservedFieldNameCreated] = `TEXT DEFAULT "" NOT NULL`
+			cols[schema.ReservedFieldNameUpdated] = `TEXT DEFAULT "" NOT NULL`
 		}
 
 		tableName := newCollection.Name
@@ -304,6 +310,7 @@ func (dao *Dao) SyncRecordTableSchema(newCollection *models.Collection, oldColle
 		}
 
 		return nil
+
 	}
 
 	// update

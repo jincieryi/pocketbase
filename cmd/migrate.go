@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/pocketbase/pocketbase/migrations_mysql"
 	"log"
 	"os"
 	"path"
@@ -97,8 +98,14 @@ type migrationsConnection struct {
 func migrationsConnectionsMap(app core.App) map[string]migrationsConnection {
 	if app.MysqlDsnEnv() != "" {
 		return map[string]migrationsConnection{
-			"db":   {},
-			"logs": {},
+			"db": {
+				DB:             app.DB(),
+				MigrationsList: migrations_mysql.AppMigrations,
+			},
+			"logs": {
+				DB:             app.LogsDB(),
+				MigrationsList: migrations_mysql.LogsMigrations,
+			},
 		}
 	} else {
 		return map[string]migrationsConnection{

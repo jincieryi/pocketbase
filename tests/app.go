@@ -64,7 +64,7 @@ func NewTestApp(optTestDataDir ...string) (*TestApp, error) {
 		return nil, err
 	}
 
-	app := core.NewBaseApp(tempDir, "pb_test_env", false)
+	app := core.NewBaseApp(tempDir, "pb_test_env", false, "pb_mysql_dsn_env")
 
 	// load data dir and db connections
 	if err := app.Bootstrap(); err != nil {
