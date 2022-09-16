@@ -29,7 +29,7 @@
     let sort = queryParams.get("sort") || "-created";
     let selectedCollectionId = queryParams.get("collectionId") || "";
 
-    $: viewableCollections = $collections.filter((c) => c.name != import.meta.env.PB_PROFILE_COLLECTION);
+    $: viewableCollections = $collections.filter((c) => c.name != import.meta.env.PB_PROFILE_COLLECTION && c.name !=import.meta.env.PB_DATASOURCE_COLLECTION);
 
     // reset filter and sort on collection change
     $: if ($activeCollection?.id && selectedCollectionId != $activeCollection.id) {

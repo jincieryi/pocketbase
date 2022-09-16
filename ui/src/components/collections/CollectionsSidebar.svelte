@@ -12,7 +12,7 @@
 
     $: filteredCollections = $collections.filter((collection) => {
         return (
-            collection.name != import.meta.env.PB_PROFILE_COLLECTION &&
+            collection.name != import.meta.env.PB_PROFILE_COLLECTION&& collection.name != import.meta.env.PB_DATASOURCE_COLLECTION &&
             (collection.id == searchTerm ||
                 collection.name.replace(/\s+/g, "").toLowerCase().includes(normalizedSearch))
         );

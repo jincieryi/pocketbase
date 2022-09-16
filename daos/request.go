@@ -1,6 +1,7 @@
 package daos
 
 import (
+	"github.com/pocketbase/pocketbase/global"
 	"time"
 
 	"github.com/pocketbase/dbx"
@@ -36,11 +37,18 @@ type RequestsStatsItem struct {
 
 // RequestsStats returns hourly grouped requests logs statistics.
 func (dao *Dao) RequestsStats(expr dbx.Expression) ([]*RequestsStatsItem, error) {
+	var query *dbx.SelectQuery
 	result := []*RequestsStatsItem{}
 
-	query := dao.RequestQuery().
-		Select("count(id) as total", "strftime('%Y-%m-%d %H:00:00', created) as date").
-		GroupBy("date")
+	if global.DB_TYPE == "mysql" {
+		query = dao.RequestQuery().
+			Select("count(id) as total", "date_format(created,'%Y-%m-%d %H:00:00') as date").
+			GroupBy("date")
+	} else {
+		query = dao.RequestQuery().
+			Select("count(id) as total", "strftime('%Y-%m-%d %H:00:00', created) as date").
+			GroupBy("date")
+	}
 
 	if expr != nil {
 		query.AndWhere(expr)

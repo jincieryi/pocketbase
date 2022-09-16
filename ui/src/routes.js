@@ -14,6 +14,7 @@ import PageAuthProviders     from "@/components/settings/PageAuthProviders.svelt
 import PageTokenOptions      from "@/components/settings/PageTokenOptions.svelte";
 import PageExportCollections from "@/components/settings/PageExportCollections.svelte";
 import PageImportCollections from "@/components/settings/PageImportCollections.svelte";
+import PageDatasources       from "@/components/datasources/PageDatasources.svelte";
 
 const baseConditions = [
     async (details) => {
@@ -130,11 +131,21 @@ const routes = {
         userData: { showAppSidebar: true },
     }),
 
+     //--- 数据源管理
+    "/settings/datasources": wrap({
+        component:  PageDatasources,
+        conditions: baseConditions.concat([(_) => ApiClient.authStore.isValid]),
+        userData: { showAppSidebar: true },
+    }),
+
+
+
     // fallback
     "*": wrap({
         component: PageIndex,
         userData: { showAppSidebar: false },
     }),
+
 };
 
 export default routes;

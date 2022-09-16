@@ -80,5 +80,18 @@
             <i class="ri-shield-user-line" />
             <span class="txt">Admins</span>
         </a>
+        <div class="sidebar-title">DataSources</div>
+        <a
+                href="/settings/datasources"
+                class="sidebar-list-item"
+                use:active={{ path: "/settings/datasources/?.*" }}
+                use:link
+        >
+            <i class="ri-shield-user-line" />
+            <span class="txt">Mysql datasources</span>
+        </a>
     </div>
+
+
+
 </aside>
