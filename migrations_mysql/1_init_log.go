@@ -12,7 +12,7 @@ func init() {
 		_, err = db.NewQuery(`
 			CREATE TABLE IF NOT EXISTS {{_requests}} (
 				[[id]]        VARCHAR(100) PRIMARY KEY,
-				[[url]]       VARCHAR(100) DEFAULT "" NOT NULL,
+				[[url]]       VARCHAR(2048) DEFAULT "" NOT NULL,
 				[[method]]    VARCHAR(100) DEFAULT "get" NOT NULL,
 				[[status]]    INTEGER DEFAULT 200 NOT NULL,
 				[[auth]]      VARCHAR(100) DEFAULT "guest" NOT NULL,
