@@ -20,6 +20,7 @@ func BindSettingsApi(app core.App, rg *echo.Group) {
 	subGroup.PATCH("", api.set)
 	subGroup.POST("/test/s3", api.testS3)
 	subGroup.POST("/test/email", api.testEmail)
+	subGroup.POST("/test/connectdb", api.testConnectDB)
 }
 
 type settingsApi struct {
@@ -122,6 +123,24 @@ func (api *settingsApi) testEmail(c echo.Context) error {
 
 		// mailer error
 		return rest.NewBadRequestError("Failed to send the test email. Raw error: \n"+err.Error(), nil)
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}
+
+func (api *settingsApi) testConnectDB(c echo.Context) error {
+	form := forms.NewTestConnectDB(api.app)
+
+	//load request
+	if err := c.Bind(form); err != nil {
+		return rest.NewBadRequestError("An error occurred while loading the test data.", err)
+	}
+
+	if db, err := core.TestConnection(form.Dsn); err != nil {
+		if db != nil {
+			db.Close()
+		}
+		return rest.NewBadRequestError("Failed to connect database. Raw error: \n"+err.Error(), nil)
 	}
 
 	return c.NoContent(http.StatusNoContent)

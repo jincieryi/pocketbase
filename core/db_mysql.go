@@ -11,3 +11,7 @@ func connectMysqlDB(mysqlDsn string) (*dbx.DB, error) {
 	db, openErr := dbx.MustOpen("mysql", fmt.Sprintf("%s?%s", mysqlDsn, pragmas))
 	return db, openErr
 }
+
+func TestConnection(mysqlDsn string) (*dbx.DB, error) {
+	return connectMysqlDB(mysqlDsn)
+}
