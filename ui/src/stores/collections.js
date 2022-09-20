@@ -53,7 +53,9 @@ export async function loadCollections(activeId = null) {
                 activeCollection.set(item);
             } else if (items.length) {
                 // fallback to the first non-profile collection item
-                const nonProfile = items.find((c) => c.name != import.meta.env.PB_PROFILE_COLLECTION)
+                const nonProfile = items.find((c) =>
+                    (c.name != import.meta.env.PB_PROFILE_COLLECTION
+                        && c.name != import.meta.env.PB_DATASOURCE_COLLECTION))
                 if (nonProfile) {
                     activeCollection.set(nonProfile);
                 }
