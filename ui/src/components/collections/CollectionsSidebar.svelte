@@ -2,8 +2,13 @@
     import { hideControls } from "@/stores/app";
     import { collections, activeCollection } from "@/stores/collections";
     import CollectionUpsertPanel from "@/components/collections/CollectionUpsertPanel.svelte";
+    import MountCollectionPanel from "@/components/collections/MountCollectionPanel.svelte";
+    import SqlCollectionPanel from "@/components/collections/SqlCollectionPanel.svelte";
 
     let collectionPanel;
+    let mountCollectionPanel;
+    let sqlCollectionPanel;
+
     let searchTerm = "";
 
     $: normalizedSearch = searchTerm.replace(/\s+/g, "").toLowerCase();
@@ -21,6 +26,8 @@
     function selectCollection(collection) {
         $activeCollection = collection;
     }
+
+
 </script>
 
 <aside class="page-sidebar collection-sidebar">
@@ -70,8 +77,22 @@
                 <i class="ri-add-line" />
                 <span class="txt">New collection</span>
             </button>
+            &nbsp;
+            <button type="button" class="btn btn-block btn-outline" on:click={() => mountCollectionPanel?.show()}>
+                <i class="ri-git-pull-request-line"/>
+                <span class="txt">Mount collection</span>
+            </button>
+            &nbsp;
+            <button type="button" class="btn btn-block btn-outline" on:click={() => sqlCollectionPanel?.show()}>
+                <i class="ri-file-code-line"/>
+                <span class="txt">Sql collection</span>
+            </button>
         </footer>
     {/if}
 </aside>
 
 <CollectionUpsertPanel bind:this={collectionPanel} />
+
+<MountCollectionPanel bind:this={mountCollectionPanel} />
+
+<SqlCollectionPanel bind:this={sqlCollectionPanel}/>

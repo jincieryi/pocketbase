@@ -775,8 +775,8 @@ func (app *BaseApp) initDataDB() error {
 		}
 	}
 
-	app.mountDBProvider = NewMountDBProvider(app.dao)
 	app.dao = app.createDaoWithHooks(app.db)
+	app.mountDBProvider = NewMountDBProvider(app.dao)
 
 	return nil
 }
