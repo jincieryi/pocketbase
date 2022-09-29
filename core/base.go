@@ -28,10 +28,11 @@ var _ App = (*BaseApp)(nil)
 // BaseApp implements core.App and defines the base PocketBase app structure.
 type BaseApp struct {
 	// configurable parameters
-	isDebug       bool
-	dataDir       string
-	encryptionEnv string
-	mysqlDsnEnv   string
+	isDebug         bool
+	dataDir         string
+	encryptionEnv   string
+	mysqlDsnEnv     string
+	mountDBProvider *MountDBProvider
 
 	// internals
 	cache               *store.Store[any]
@@ -122,6 +123,10 @@ type BaseApp struct {
 	onCollectionAfterDeleteRequest   *hook.Hook[*CollectionDeleteEvent]
 	onCollectionsBeforeImportRequest *hook.Hook[*CollectionsImportEvent]
 	onCollectionsAfterImportRequest  *hook.Hook[*CollectionsImportEvent]
+}
+
+func (app *BaseApp) MountDBProvider() *MountDBProvider {
+	return app.mountDBProvider
 }
 
 // NewBaseApp creates and returns a new BaseApp instance
@@ -771,6 +776,7 @@ func (app *BaseApp) initDataDB() error {
 	}
 
 	app.dao = app.createDao(app.db)
+	app.mountDBProvider = NewMountDBProvider(app.dao)
 
 	return nil
 }

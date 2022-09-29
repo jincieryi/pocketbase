@@ -15,6 +15,10 @@ import (
 
 // App defines the main PocketBase app interface.
 type App interface {
+
+	// MountDBProvider returns the MountDBProvider
+	MountDBProvider() *MountDBProvider
+
 	// DB returns the default app database instance.
 	DB() *dbx.DB
 

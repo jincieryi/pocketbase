@@ -1,6 +1,9 @@
 package apis
 
 import (
+	"database/sql"
+	"fmt"
+	"github.com/pocketbase/dbx"
 	"net/http"
 
 	"github.com/labstack/echo/v5"
@@ -22,6 +25,7 @@ func BindCollectionApi(app core.App, rg *echo.Group) {
 	subGroup.PATCH("/:collection", api.update)
 	subGroup.DELETE("/:collection", api.delete)
 	subGroup.PUT("/import", api.bulkImport)
+	subGroup.POST("/mountdb/excute-sql", api.excuteSql)
 }
 
 type collectionApi struct {
@@ -202,4 +206,76 @@ func (api *collectionApi) bulkImport(c echo.Context) error {
 	}
 
 	return submitErr
+}
+
+func (api *collectionApi) excuteSql(c echo.Context) error {
+	form := forms.NewExcuteSql(api.app)
+	// load request data
+	if err := c.Bind(form); err != nil {
+		return rest.NewBadRequestError("Failed to load the submitted data due to invalid formatting.", err)
+	}
+
+	mountDB, err := api.app.MountDBProvider().Get(form.Did)
+	if err != nil {
+		return rest.NewApiError(http.StatusInternalServerError, "Failed to get MountDB.", err)
+	}
+
+	selectWithLimitSql := fmt.Sprintf("select * from ( %s ) t limit 0,20 ;", form.RawSql)
+	rows, err := mountDB.GetDB().NewQuery(selectWithLimitSql).Rows()
+
+	if err != nil {
+		return rest.NewBadRequestError("Failed to excute sql.", err)
+	}
+	types, _ := rows.ColumnTypes()
+
+	var schema []map[string]string
+	for i := range types {
+		t := types[i]
+
+		schema = append(schema, map[string]string{
+			"name": t.Name(),
+			"type": convertSchema(t.DatabaseTypeName()),
+		},
+		)
+
+	}
+	var result []interface{}
+
+	for rows.Next() {
+		var row dbx.NullStringMap = make(map[string]sql.NullString)
+		_ = rows.ScanMap(row)
+		temp := make(map[string]string)
+
+		for _, s := range schema {
+			cellValue := row[s["name"]].String
+			temp[s["name"]] = cellValue
+		}
+
+		result = append(result, temp)
+	}
+
+	resultMap := make(map[string]interface{})
+
+	resultMap["schema"] = schema
+	resultMap["records"] = result
+
+	return c.JSON(http.StatusOK, resultMap)
+}
+
+//convert mysql schema to collection schema
+func convertSchema(name string) string {
+
+	switch name {
+
+	case "VARCHAR":
+		return "text"
+	case "NUMBER":
+		return "number"
+	case "TINYINT":
+		return "number"
+	case "JSON":
+		return "json"
+	default:
+		return "text"
+	}
 }
