@@ -212,7 +212,7 @@
 
 <OverlayPanel
         bind:this={sqlCollectionPanel}
-        class="overlay-panel-xl colored-header compact-header collection-panel"
+        class="overlay-panel-xxl colored-header compact-header collection-panel"
         beforeHide={() => {
         if (!!collection?.exp?.rawSql && confirmClose) {
             confirm("You have unsaved changes. Do you really want to close the panel?", () => {
