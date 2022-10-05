@@ -180,7 +180,7 @@ func TestFileSystemServe(t *testing.T) {
 				"Content-Disposition":     "attachment; filename=test_name.txt",
 				"Content-Type":            "application/octet-stream",
 				"Content-Length":          "0",
-				"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+				"Content-Security-Policy": "default-src 'none'; media-src 'self'; style-src 'unsafe-inline'; sandbox",
 			},
 		},
 		{
@@ -192,7 +192,7 @@ func TestFileSystemServe(t *testing.T) {
 				"Content-Disposition":     "inline; filename=test_name.png",
 				"Content-Type":            "image/png",
 				"Content-Length":          "73",
-				"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+				"Content-Security-Policy": "default-src 'none'; media-src 'self'; style-src 'unsafe-inline'; sandbox",
 			},
 		},
 		{
@@ -204,7 +204,7 @@ func TestFileSystemServe(t *testing.T) {
 				"Content-Disposition":     "attachment; filename=test_name.svg",
 				"Content-Type":            "image/svg+xml",
 				"Content-Length":          "0",
-				"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+				"Content-Security-Policy": "default-src 'none'; media-src 'self'; style-src 'unsafe-inline'; sandbox",
 			},
 		},
 		{
@@ -216,7 +216,7 @@ func TestFileSystemServe(t *testing.T) {
 				"Content-Disposition":     "attachment; filename=test_name.css",
 				"Content-Type":            "text/css",
 				"Content-Length":          "0",
-				"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+				"Content-Security-Policy": "default-src 'none'; media-src 'self'; style-src 'unsafe-inline'; sandbox",
 			},
 		},
 	}
@@ -239,6 +239,10 @@ func TestFileSystemServe(t *testing.T) {
 			if v != hValue {
 				t.Errorf("(%s) Expected value %q for header %q, got %q", scenario.path, hValue, hName, v)
 			}
+		}
+
+		if v := result.Header.Get("X-Frame-Options"); v != "" {
+			t.Errorf("(%s) Expected the X-Frame-Options header to be unset, got %v", scenario.path, v)
 		}
 	}
 }
