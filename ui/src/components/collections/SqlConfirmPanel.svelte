@@ -12,7 +12,7 @@
     import Field from "@/components/base/Field.svelte";
     import Toggler from "@/components/base/Toggler.svelte";
     import OverlayPanel from "@/components/base/OverlayPanel.svelte";
-    import CollectionFieldsTab from "@/components/collections/CollectionFieldsTab.svelte";
+    import CollectionFieldsTab from "@/components/collections/SqlCollectionFieldsTab.svelte";
     import CollectionRulesTab from "@/components/collections/CollectionRulesTab.svelte";
     import CollectionUpdateConfirm from "@/components/collections/CollectionUpdateConfirm.svelte";
 
@@ -183,7 +183,7 @@
 >
     <svelte:fragment slot="header">
         <h4>
-            {collection.isNew ? "New collection" : "Edit collection"}
+            {collection.isNew ? "New sqlcollection" : "Edit sqlcollection"}
         </h4>
 
         {#if !collection.isNew && !collection.system}

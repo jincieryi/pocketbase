@@ -18,7 +18,7 @@
 
 
     let collection = new Collection();
-    collection.exp=new Record();
+    collection.exp = new Record();
 
     let selectedDatasource;
 
@@ -242,7 +242,7 @@
                 <div class="col-lg-6">
                     <Field
                             class="form-field required m-b-0 {isSystemUpdate ? 'disabled' : ''}"
-                            name="name"
+                            name="datasource"
                             let:uniqueId
                     >
                         <label for={uniqueId}>Datasource</label>
@@ -257,7 +257,7 @@
                 <div class="col-lg-10">
 
                     <Field class="form-field required m-b-0 {isSystemUpdate ? 'disabled' : ''}"
-                           name="name"
+                           name="rawSql"
                            let:uniqueId>
                         <label for={uniqueId}>Sql Editor</label>
 
