@@ -19,9 +19,11 @@ import (
 
 // Common request context keys used by the middlewares and api handlers.
 const (
-	ContextUserKey       string = "user"
-	ContextAdminKey      string = "admin"
-	ContextCollectionKey string = "collection"
+	ContextUserKey          string = "user"
+	ContextAdminKey         string = "admin"
+	ContextCollectionKey    string = "collection"
+	ContextCollectionExpKey string = "collectionExp"
+	ContextMountDB          string = "contextMountDB"
 )
 
 // RequireGuestOnly middleware requires a request to NOT have a valid
@@ -198,6 +200,31 @@ func LoadCollectionContext(app core.App) echo.MiddlewareFunc {
 				}
 
 				c.Set(ContextCollectionKey, collection)
+			}
+
+			return next(c)
+		}
+	}
+}
+
+//LoadCollectionExpContext 获取CollectionExp信息
+func LoadCollectionExpContext(app core.App) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			if collection := c.Get(ContextCollectionKey); collection != "" {
+				collectionExp, _ := app.Dao().FindCollectionExpByNameOrId(collection.(*models.Collection))
+
+				if collectionExp != nil {
+
+					mountDB, err := app.MountDBProvider().Get(collectionExp.GetStringDataValue("did"))
+					if err != nil {
+						return rest.NewApiError(http.StatusInternalServerError, "get mountDB err", err.Error())
+					}
+
+					c.Set(ContextCollectionExpKey, collectionExp)
+					c.Set(ContextMountDB, mountDB.GetDB())
+
+				}
 			}
 
 			return next(c)

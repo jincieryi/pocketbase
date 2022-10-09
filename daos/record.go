@@ -22,6 +22,14 @@ func (dao *Dao) RecordQuery(collection *models.Collection) *dbx.SelectQuery {
 	return dao.DB().Select(selectCols).From(tableName)
 }
 
+// RecordSubQuery returns a new Record select query by subSql
+func (dao *Dao) RecordSubQuery(collection *models.Collection, subSql string) *dbx.SelectQuery {
+	tableName := collection.Name
+	selectCols := fmt.Sprintf("%s.*", dao.DB().QuoteSimpleColumnName(tableName))
+
+	return dao.DB().Select(selectCols).From(fmt.Sprintf(`( %s ) as %s`, subSql, tableName))
+}
+
 // FindRecordById finds the Record model by its id.
 func (dao *Dao) FindRecordById(
 	collection *models.Collection,
@@ -381,4 +389,33 @@ func (dao *Dao) SyncRecordTableSchema(newCollection *models.Collection, oldColle
 
 		return nil
 	})
+}
+
+// FindCollectionExpByNameOrId finds the first collectionExp by its name or id.
+// NB FindFirstRecordByData
+func (dao *Dao) FindCollectionExpByNameOrId(collection *models.Collection) (*models.Record, error) {
+	row := dbx.NullStringMap{}
+	expCollection := &models.Collection{
+		Name: "collectionsExtend",
+		Schema: schema.NewSchema(
+			&schema.SchemaField{
+				Type: schema.FieldTypeText,
+				Name: "did",
+			},
+			&schema.SchemaField{
+				Type: schema.FieldTypeText,
+				Name: "rawSql",
+			},
+		),
+	}
+	err := dao.RecordQuery(expCollection).
+		AndWhere(dbx.HashExp{"cid": collection.Id}).
+		Limit(1).
+		One(row)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return models.NewRecordFromNullStringMap(expCollection, row), nil
 }

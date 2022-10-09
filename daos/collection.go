@@ -162,6 +162,30 @@ func (dao *Dao) SaveCollection(collection *models.Collection) error {
 	})
 }
 
+// SaveSqlCollection upserts the provided Collection model and updates
+// its related records table schema.
+func (dao *Dao) SaveSqlCollection(collection *models.Collection) error {
+
+	if !collection.IsNew() {
+		// get the existing collection state to compare with the new one
+		// note: the select is outside of the transaction to prevent SQLITE_LOCKED error when mixing read&write in a single transaction
+		var findErr error
+		_, findErr = dao.FindCollectionByNameOrId(collection.Id)
+		if findErr != nil {
+			return findErr
+		}
+	}
+
+	return dao.RunInTransaction(func(txDao *Dao) error {
+		// persist the collection model
+		if err := txDao.Save(collection); err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
 // ImportCollections imports the provided collections list within a single transaction.
 //
 // NB1! If deleteMissing is set, all local collections and schema fields, that are not present

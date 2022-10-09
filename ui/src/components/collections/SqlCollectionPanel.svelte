@@ -18,12 +18,12 @@
 
 
     let collection = new Collection();
-    collection.exp = new Record();
+    let collectionExp = new Record();
 
     let selectedDatasource;
 
     $:{
-        collection.exp.did = selectedDatasource?.id
+        collectionExp.did = selectedDatasource?.id
     }
 
 
@@ -41,7 +41,7 @@
     function search() {
         excuteErrorMsg=""
 
-        if(!collection?.exp?.rawSql || !collection?.exp?.did){
+        if(!collectionExp?.rawSql || !collectionExp?.did){
             excuteErrorMsg = "Datasource or sql is invalid";
             return;
         }else{
@@ -50,9 +50,9 @@
 
         isSearching = true;
 
-        let request  = ApiClient.send("/api/collections/mountdb/excute-sql",{
+        let request  = ApiClient.send("/api/sql-collections/excute-sql",{
             'method': 'POST',
-            'body':   {rawSql:collection?.exp?.rawSql,did:collection?.exp?.did},
+            'body':   {rawSql:collectionExp?.rawSql,did:collectionExp?.did},
         });
 
          return request
@@ -74,14 +74,15 @@
 
     function asCollection() {
         search().then(
-            (result)=>{
+            ()=>{
                 if(excuteErrorMsg){
                    return
                 }
-                let c = collection?.clone()
-                c.schema = searchResult.schema
-                sqlConfirmPanel?.show(c)
-                console.log(c)
+
+                let c = collection?.clone();
+                let cExp = collectionExp?.clone();
+                c.schema = searchResult.schema;
+                sqlConfirmPanel?.show(c,cExp)
             }
         );
     }
@@ -130,13 +131,14 @@
     async function load(model) {
         setErrors({}); // reset errors
         if (typeof model !== "undefined") {
-            //TODO get exp by cid
+            //TODO get collectionExp by cid
             original = model;
             collection = model?.clone();
 
         } else {
             original = null;
-            collection.exp = new Record();
+            collection = new Collection();
+            collectionExp = new Record();
 
         }
 
@@ -214,7 +216,7 @@
         bind:this={sqlCollectionPanel}
         class="overlay-panel-xxl colored-header compact-header collection-panel"
         beforeHide={() => {
-        if (!!collection?.exp?.rawSql && confirmClose) {
+        if (!!collectionExp?.rawSql && confirmClose) {
             confirm("You have unsaved changes. Do you really want to close the panel?", () => {
                 confirmClose = false;
                 searchResult={};
@@ -267,7 +269,7 @@
                                 spellcheck="false"
                                 rows="8"
                                 required
-                                bind:value={collection.exp.rawSql}
+                                bind:value={collectionExp.rawSql}
 
                         />
                         {#if  !!excuteErrorMsg}
@@ -355,7 +357,7 @@
                 class="btn btn-expanded"
                 on:click={() => asCollection()}
         >
-            <span class="txt">{collection.exp.isNew ? "As Collection" : "Save changes"}</span>
+            <span class="txt">{collectionExp.isNew ? "As Collection" : "Save changes"}</span>
         </button>
     </svelte:fragment>
 </OverlayPanel>

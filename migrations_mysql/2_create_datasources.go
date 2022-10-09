@@ -51,6 +51,7 @@ func init() {
 		}
 		collection.Id = "systemdatasources0"
 		collection.MarkAsNew()
+		collection.System = true
 
 		return daos.New(db).SaveCollection(collection)
 

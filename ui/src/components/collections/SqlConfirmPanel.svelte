@@ -1,5 +1,5 @@
 <script>
-    import { Collection } from "pocketbase";
+    import {Collection, Record} from "pocketbase";
     import { createEventDispatcher, tick } from "svelte";
     import { scale } from "svelte/transition";
     import CommonHelper from "@/utils/CommonHelper";
@@ -25,6 +25,7 @@
 
     let original = null;
     let collection = new Collection();
+    let collectionExp = new Record();
     let isSaving = false;
     let confirmClose = false; // prevent close recursion
     let activeTab = TAB_FIELDS;
@@ -46,8 +47,8 @@
         activeTab = newTab;
     }
 
-    export function show(model) {
-        load(model);
+    export function show(cmodel,cexpmodel) {
+        load(cmodel,cexpmodel);
 
         confirmClose = true;
 
@@ -60,14 +61,17 @@
         return collectionPanel?.hide();
     }
 
-    async function load(model) {
+    async function load(cmodel,cexpmodel) {
         setErrors({}); // reset errors
-        if (typeof model !== "undefined") {
-            original = model;
-            collection = model?.clone();
+        if (typeof cmodel !== "undefined") {
+            original = cmodel;
+            collection = cmodel?.clone();
+            collectionExp = cexpmodel?.clone();
+            console.log(collection)
         } else {
             original = null;
             collection = new Collection();
+            collectionExp = new Record();
         }
         // normalize
         collection.schema = collection.schema || [];
@@ -97,17 +101,24 @@
 
         let request;
         if (collection.isNew) {
-            request = ApiClient.collections.create(data);
+            request = ApiClient.send("/api/sql-collections",{
+                'method': 'POST',
+                'body':   data,
+            })
         } else {
             request = ApiClient.collections.update(collection.id, data);
         }
 
-        request
-            .then((result) => {
+        request.then((result)=>{
+            const data = {cid:result.id,did:collectionExp.did,rawSql:collectionExp.rawSql}
+            return ApiClient.records.create("collectionsExtend",data).then(()=>{
+                return result //返回第一次执行的collection
+            })
+        }).then((result) => {
                 confirmClose = false;
                 hide();
                 addSuccessToast(
-                    collection.isNew ? "Successfully created collection." : "Successfully updated collection."
+                    collection.isNew ? "Successfully created sql-collection." : "Successfully updated sql-collection."
                 );
                 addCollection(result);
 

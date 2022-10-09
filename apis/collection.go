@@ -25,7 +25,11 @@ func BindCollectionApi(app core.App, rg *echo.Group) {
 	subGroup.PATCH("/:collection", api.update)
 	subGroup.DELETE("/:collection", api.delete)
 	subGroup.PUT("/import", api.bulkImport)
-	subGroup.POST("/mountdb/excute-sql", api.excuteSql)
+
+	sqlSubGroup := rg.Group("/sql-collections", ActivityLogger(app), RequireAdminAuth())
+	sqlSubGroup.POST("/excute-sql", api.excuteSql)
+	sqlSubGroup.POST("", api.createSqlCollection)
+
 }
 
 type collectionApi struct {
@@ -90,6 +94,41 @@ func (api *collectionApi) create(c echo.Context) error {
 	}
 
 	// create the collection
+	submitErr := form.Submit(func(next forms.InterceptorNextFunc) forms.InterceptorNextFunc {
+		return func() error {
+			return api.app.OnCollectionBeforeCreateRequest().Trigger(event, func(e *core.CollectionCreateEvent) error {
+				if err := next(); err != nil {
+					return rest.NewBadRequestError("Failed to create the collection.", err)
+				}
+
+				return e.HttpContext.JSON(http.StatusOK, e.Collection)
+			})
+		}
+	})
+
+	if submitErr == nil {
+		api.app.OnCollectionAfterCreateRequest().Trigger(event)
+	}
+
+	return submitErr
+}
+
+func (api *collectionApi) createSqlCollection(c echo.Context) error {
+	collection := &models.Collection{}
+
+	form := forms.NewSqlCollectionUpsert(api.app, collection)
+
+	// load request
+	if err := c.Bind(form); err != nil {
+		return rest.NewBadRequestError("Failed to load the submitted data due to invalid formatting.", err)
+	}
+
+	event := &core.CollectionCreateEvent{
+		HttpContext: c,
+		Collection:  collection,
+	}
+
+	// create the sql collection
 	submitErr := form.Submit(func(next forms.InterceptorNextFunc) forms.InterceptorNextFunc {
 		return func() error {
 			return api.app.OnCollectionBeforeCreateRequest().Trigger(event, func(e *core.CollectionCreateEvent) error {

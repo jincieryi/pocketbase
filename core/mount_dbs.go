@@ -1,15 +1,20 @@
 package core
 
 import (
+	"context"
+	"database/sql"
+	"github.com/fatih/color"
 	"github.com/go-sql-driver/mysql"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/daos"
 	"github.com/pocketbase/pocketbase/tools/store"
+	"time"
 )
 
 type MountDBProvider struct {
 	masterDao *daos.Dao
 	cache     *store.Store[*MountDB]
+	isDebug   bool
 }
 
 type MountDB struct {
@@ -19,12 +24,12 @@ type MountDB struct {
 }
 
 //初始化MountDBProvider
-func NewMountDBProvider(masterDao *daos.Dao) *MountDBProvider {
-	return &MountDBProvider{masterDao: masterDao, cache: store.New[*MountDB](nil)}
+func NewMountDBProvider(masterDao *daos.Dao, isDebug bool) *MountDBProvider {
+	return &MountDBProvider{masterDao: masterDao, cache: store.New[*MountDB](nil), isDebug: isDebug}
 }
 
 //构造MountDB
-func NewMountDB(id string, dsn string) (*MountDB, error) {
+func newMountDB(id string, dsn string, isDebug bool) (*MountDB, error) {
 	config, err := mysql.ParseDSN(dsn)
 	if err != nil {
 		return nil, err
@@ -34,6 +39,17 @@ func NewMountDB(id string, dsn string) (*MountDB, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if isDebug {
+		db.QueryLogFunc = func(ctx context.Context, t time.Duration, sql string, rows *sql.Rows, err error) {
+			color.HiBlack("[MountDB][%.2fms] %v\n", float64(t.Milliseconds()), sql)
+
+			if err != nil {
+				color.HiRed(err.Error())
+			}
+		}
+	}
+
 	return &MountDB{
 		id: id, db: db, schemaName: config.DBName,
 	}, err
@@ -59,7 +75,7 @@ func (provider *MountDBProvider) Get(id string) (*MountDB, error) {
 		return nil, err
 	}
 
-	db, err := NewMountDB(id, datasource.Data()["dsn"].(string))
+	db, err := newMountDB(id, datasource.Data()["dsn"].(string), provider.isDebug)
 	if err != nil {
 		return nil, err
 	}

@@ -27,13 +27,25 @@ func BindRecordApi(app core.App, rg *echo.Group) {
 		"/collections/:collection/records",
 		ActivityLogger(app),
 		LoadCollectionContext(app),
+		LoadCollectionExpContext(app),
 	)
 
-	subGroup.GET("", api.list)
+	subGroup.GET("", api.choiceByContext(api.list, api.sqlCollectionList))
 	subGroup.POST("", api.create)
 	subGroup.GET("/:id", api.view)
 	subGroup.PATCH("/:id", api.update)
 	subGroup.DELETE("/:id", api.delete)
+}
+
+// choiceByContext  choice handler by context
+func (api *recordApi) choiceByContext(defaultCollectionFunc func(c echo.Context) error, sqlCollectionFunc func(c echo.Context) error) func(c echo.Context) error {
+	return func(c echo.Context) error {
+		if c.Get(ContextCollectionExpKey) == nil {
+			return defaultCollectionFunc(c)
+		} else {
+			return sqlCollectionFunc(c)
+		}
+	}
 }
 
 type recordApi struct {
@@ -451,4 +463,69 @@ func (api *recordApi) expandFunc(c echo.Context, requestData map[string]any) dao
 			return nil
 		})
 	}
+}
+
+func (api *recordApi) sqlCollectionList(c echo.Context) error {
+	collection, _ := c.Get(ContextCollectionKey).(*models.Collection)
+	if collection == nil {
+		return rest.NewNotFoundError("", "Missing collection context.")
+	}
+
+	admin, _ := c.Get(ContextAdminKey).(*models.Admin)
+	if admin == nil && collection.ListRule == nil {
+		// only admins can access if the rule is nil
+		return rest.NewForbiddenError("Only admins can perform this action.", nil)
+	}
+
+	// forbid users and guests to query special filter/sort fields
+	if err := api.checkForForbiddenQueryFields(c); err != nil {
+		return err
+	}
+
+	requestData := api.exportRequestData(c)
+
+	fieldsResolver := resolvers.NewRecordFieldResolver(api.app.Dao(), collection, requestData)
+
+	mountDao := daos.New(c.Get(ContextMountDB).(dbx.Builder))
+	collectionExp := c.Get(ContextCollectionExpKey).(*models.Record)
+	searchProvider := search.NewProvider(fieldsResolver).
+		Query(mountDao.RecordSubQuery(collection, collectionExp.GetStringDataValue("rawSql")))
+
+	if admin == nil && collection.ListRule != nil {
+		searchProvider.AddFilter(search.FilterData(*collection.ListRule))
+	}
+
+	var rawRecords = []dbx.NullStringMap{}
+	result, err := searchProvider.ParseAndExec(c.QueryString(), &rawRecords)
+	if err != nil {
+		return rest.NewBadRequestError("Invalid filter parameters.", err)
+	}
+
+	records := models.NewRecordsFromNullStringMaps(collection, rawRecords)
+
+	// expand records relations
+	expands := strings.Split(c.QueryParam(expandQueryParam), ",")
+	if len(expands) > 0 {
+		failed := api.app.Dao().ExpandRecords(
+			records,
+			expands,
+			api.expandFunc(c, requestData),
+		)
+		if len(failed) > 0 && api.app.IsDebug() {
+			log.Println("Failed to expand relations: ", failed)
+		}
+	}
+
+	result.Items = records
+
+	event := &core.RecordsListEvent{
+		HttpContext: c,
+		Collection:  collection,
+		Records:     records,
+		Result:      result,
+	}
+
+	return api.app.OnRecordsListRequest().Trigger(event, func(e *core.RecordsListEvent) error {
+		return e.HttpContext.JSON(http.StatusOK, e.Result)
+	})
 }
