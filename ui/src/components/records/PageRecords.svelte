@@ -16,17 +16,20 @@
     import CollectionDocsPanel from "@/components/collections/docs/CollectionDocsPanel.svelte";
     import RecordUpsertPanel from "@/components/records/RecordUpsertPanel.svelte";
     import RecordsList from "@/components/records/RecordsList.svelte";
+    import SqlCollectionPanel from "@/components/collections/SqlCollectionPanel.svelte";
 
     $pageTitle = "Collections";
 
     const queryParams = new URLSearchParams($querystring);
+
+    let sqlCollectionPanel;
 
     let collectionUpsertPanel;
     let collectionDocsPanel;
     let recordPanel;
     let recordsList;
     let filter = queryParams.get("filter") || "";
-    let sort = queryParams.get("sort") || "-created";
+    let sort = queryParams.get("sort") || ""
     let selectedCollectionId = queryParams.get("collectionId") || "";
 
     $: viewableCollections = $collections.filter((c) => c.name != import.meta.env.PB_PROFILE_COLLECTION && c.name !=import.meta.env.PB_DATASOURCE_COLLECTION);
@@ -48,7 +51,7 @@
 
     function reset() {
         selectedCollectionId = $activeCollection.id;
-        sort = "-created";
+        sort = !$activeCollection.isSqlType?"-created":"";
         filter = "";
     }
 
@@ -95,14 +98,26 @@
 
             <div class="inline-flex gap-5">
                 {#if !$hideControls}
-                    <button
-                        type="button"
-                        class="btn btn-secondary btn-circle"
-                        use:tooltip={{ text: "Edit collection", position: "right" }}
-                        on:click={() => collectionUpsertPanel?.show($activeCollection)}
-                    >
-                        <i class="ri-settings-4-line" />
-                    </button>
+
+                    {#if $activeCollection.isSqlType}
+                            <button
+                                    type="button"
+                                    class="btn btn-secondary btn-circle"
+                                    use:tooltip={{ text: "Edit collection", position: "right" }}
+                                    on:click={() => sqlCollectionPanel?.show($activeCollection)}
+                            >
+                            <i class="ri-settings-4-line" />
+                            </button>
+                        {:else}
+                            <button
+                                    type="button"
+                                    class="btn btn-secondary btn-circle"
+                                    use:tooltip={{ text: "Edit collection", position: "right" }}
+                                    on:click={() => collectionUpsertPanel?.show($activeCollection)}
+                            >
+                            <i class="ri-settings-4-line" />
+                        </button>
+                    {/if}
                 {/if}
 
                 <RefreshButton on:refresh={() => recordsList?.load()} />
@@ -118,10 +133,13 @@
                     <span class="txt">API Preview</span>
                 </button>
 
-                <button type="button" class="btn btn-expanded" on:click={() => recordPanel?.show()}>
-                    <i class="ri-add-line" />
-                    <span class="txt">New record</span>
-                </button>
+                {#if (!$activeCollection.isSqlType)}
+                    <button type="button" class="btn btn-expanded" on:click={() => recordPanel?.show()}>
+                        <i class="ri-add-line" />
+                        <span class="txt">New record</span>
+                    </button>
+                {/if}
+
             </div>
         </header>
 
@@ -144,6 +162,8 @@
 <CollectionUpsertPanel bind:this={collectionUpsertPanel} />
 
 <CollectionDocsPanel bind:this={collectionDocsPanel} />
+
+<SqlCollectionPanel bind:this={sqlCollectionPanel}/>
 
 <RecordUpsertPanel
     bind:this={recordPanel}

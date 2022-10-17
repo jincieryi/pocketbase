@@ -1,14 +1,12 @@
 <script>
     import SortHeader from "@/components/base/SortHeader.svelte";
     import RecordFieldCell from "@/components/records/RecordFieldCell.svelte";
-    import {Collection, Record} from "pocketbase";
     import {createEventDispatcher, tick} from "svelte";
     import CommonHelper from "@/utils/CommonHelper";
     import ApiClient from "@/utils/ApiClient";
     import {setErrors} from "@/stores/errors";
-    import {confirm} from "@/stores/confirmation";
-    import {addSuccessToast} from "@/stores/toasts";
-    import {activeCollection, addCollection} from "@/stores/collections";
+    import {resetConfirmation,confirm,confirmation} from "@/stores/confirmation";
+    import {CollectionExp} from "@/stores/collections";
     import Field from "@/components/base/Field.svelte";
     import OverlayPanel from "@/components/base/OverlayPanel.svelte";
     import DataSourceSelect from "@/components/collections/DatasourceSelect.svelte"
@@ -16,14 +14,13 @@
 
 
 
-
-    let collection = new Collection();
-    let collectionExp = new Record();
+    let original = null;
+    let collection = new CollectionExp();
 
     let selectedDatasource;
 
     $:{
-        collectionExp.did = selectedDatasource?.id
+        collection.did = selectedDatasource?.id
     }
 
 
@@ -38,10 +35,12 @@
     $: fields = searchResult?.schema||[];
     $: records = searchResult?.records||[];
 
-    function search() {
+
+
+     function search() {
         excuteErrorMsg=""
 
-        if(!collectionExp?.rawSql || !collectionExp?.did){
+        if(!collection?.rawSql || !collection?.did){
             excuteErrorMsg = "Datasource or sql is invalid";
             return;
         }else{
@@ -52,7 +51,7 @@
 
         let request  = ApiClient.send("/api/sql-collections/excute-sql",{
             'method': 'POST',
-            'body':   {rawSql:collectionExp?.rawSql,did:collectionExp?.did},
+            'body':   {rawSql:collection?.rawSql,did:collection?.did},
         });
 
          return request
@@ -73,16 +72,16 @@
 
 
     function asCollection() {
-        search().then(
+        search()?.then(
             ()=>{
                 if(excuteErrorMsg){
                    return
                 }
 
                 let c = collection?.clone();
-                let cExp = collectionExp?.clone();
                 c.schema = searchResult.schema;
-                sqlConfirmPanel?.show(c,cExp)
+
+                sqlConfirmPanel?.show(c,hasChanges)
             }
         );
     }
@@ -95,7 +94,7 @@
     let sqlCollectionPanel;
 
 
-    let original = null;
+
 
     let isSaving = false;
     let confirmClose = false; // prevent close recursion
@@ -108,82 +107,58 @@
 
     $: hasChanges = initialFormHash != calculateFormHash(collection);
 
-    $: canSave = collection.isNew || hasChanges;
+    $: canAsCollection = collection.isNew || hasChanges;
 
     export function changeTab(newTab) {
         activeTab = newTab;
     }
 
     export function show(model) {
+
         load(model);
 
         confirmClose = true;
 
         changeTab(TAB_FIELDS);
 
-        return sqlCollectionPanel?.show();
+        if (collection.isNew) {
+            sqlCollectionPanel?.show()
+        }else{
+            sqlCollectionPanel?.show()
+            setTimeout(()=>{ // 增加延时，否则两个Panel的z-index相同，导致编辑数据后 cancel弹出框在Pannel后面
+                sqlConfirmPanel?.show(collection)
+            },1)
+
+        }
+
     }
 
     export function hide() {
         return sqlCollectionPanel?.hide();
     }
 
+
     async function load(model) {
         setErrors({}); // reset errors
         if (typeof model !== "undefined") {
-            //TODO get collectionExp by cid
             original = model;
             collection = model?.clone();
-
         } else {
             original = null;
-            collection = new Collection();
-            collectionExp = new Record();
-
+            collection = new CollectionExp();
         }
+
+        // normalize
+        collection.schema = collection.schema || [];
+        collection.originalName = collection.name || "";
+
+        await tick();
+
+        initialFormHash = calculateFormHash(collection);
 
     }
 
 
-
-    function save() {
-        if (isSaving) {
-            return;
-        }
-
-        isSaving = true;
-
-        const data = exportFormData();
-
-        let request;
-        if (collection.isNew) {
-            request = ApiClient.collections.create(data);
-        } else {
-            request = ApiClient.collections.update(collection.id, data);
-        }
-
-        request
-            .then((result) => {
-                confirmClose = false;
-                hide();
-                addSuccessToast(
-                    collection.isNew ? "Successfully created collection." : "Successfully updated collection."
-                );
-                addCollection(result);
-
-                if (collection.isNew) {
-                    $activeCollection = result;
-                }
-
-                dispatch("save", result);
-            })
-            .catch((err) => {
-                ApiClient.errorResponseHandler(err);
-            })
-            .finally(() => {
-                isSaving = false;
-            });
-    }
 
     function exportFormData() {
         const data = collection.export();
@@ -206,17 +181,14 @@
     }
 
 
-
-
-
-
 </script>
 
 <OverlayPanel
         bind:this={sqlCollectionPanel}
         class="overlay-panel-xxl colored-header compact-header collection-panel"
         beforeHide={() => {
-        if (!!collectionExp?.rawSql && confirmClose) {
+        if (hasChanges && confirmClose) {
+
             confirm("You have unsaved changes. Do you really want to close the panel?", () => {
                 confirmClose = false;
                 searchResult={};
@@ -249,7 +221,7 @@
                     >
                         <label for={uniqueId}>Datasource</label>
                         <!-- svelte-ignore a11y-autofocus -->
-                        <DataSourceSelect bind:selected={selectedDatasource}></DataSourceSelect>
+                        <DataSourceSelect bind:keyOfSelected = {collection.did} ></DataSourceSelect>
 
                     </Field>
                 </div>
@@ -262,14 +234,13 @@
                            name="rawSql"
                            let:uniqueId>
                         <label for={uniqueId}>Sql Editor</label>
-
                         <textarea
                                 id={uniqueId}
                                 class="txt-mono"
                                 spellcheck="false"
                                 rows="8"
                                 required
-                                bind:value={collectionExp.rawSql}
+                                bind:value={collection.rawSql}
 
                         />
                         {#if  !!excuteErrorMsg}
@@ -352,20 +323,25 @@
         <button type="button" class="btn btn-secondary"  on:click={() => hide()}>
             <span class="txt">Cancel</span>
         </button>
+
         <button
                 type="button"
                 class="btn btn-expanded"
+                disabled={!canAsCollection || isSearching}
                 on:click={() => asCollection()}
         >
-            <span class="txt">{collectionExp.isNew ? "As Collection" : "Save changes"}</span>
+            <span class="txt">{collection.isNew ? "As Collection" : "Save changes"}</span>
         </button>
     </svelte:fragment>
 </OverlayPanel>
 
-<SqlConfirmPanel bind:this={sqlConfirmPanel}/>
+<SqlConfirmPanel bind:this={sqlConfirmPanel} on:save={()=>{
+    confirmClose = false;
+    hide();
+}} on:delete={()=>{
+    confirmClose = false;
+    hide();
+}}/>
 <style>
-    .tabs-content {
-        z-index: 3; /* autocomplete dropdown overlay fix */
-    }
 
 </style>

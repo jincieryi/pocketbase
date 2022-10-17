@@ -1,10 +1,12 @@
-import { writable } from "svelte/store";
-import ApiClient    from "@/utils/ApiClient";
+import {writable} from "svelte/store";
+import ApiClient from "@/utils/ApiClient";
 import CommonHelper from "@/utils/CommonHelper";
+import {Collection} from "pocketbase";
 
-export const collections          = writable([]);
-export const activeCollection     = writable({});
+export const collections = writable([]);
+export const activeCollection = writable({});
 export const isCollectionsLoading = writable(false);
+
 
 // add or update collection
 export function addCollection(collection) {
@@ -35,6 +37,45 @@ export function removeCollection(collection) {
 
 }
 
+/**
+ * CollectionExp  Collection的扩展
+ */
+export class CollectionExp extends Collection {
+    constructor() {
+        super();
+    }
+
+    /**
+     * Exports all model properties as a new plain object.
+     */
+    export() {
+        return Object.assign({}, this);
+    }
+
+    load(data) {
+
+        super.load(data);
+        this.setExp(data)
+    }
+
+    setExp(data={}){
+        this.rawSql = typeof data.rawSql === 'string' ? data.rawSql : null;
+        this.did = typeof data.did === 'string' ? data.did : null;
+        this.cid = typeof data.cid === 'string' ? data.cid : null;
+    }
+
+    get isSqlType(){
+        return typeof this.rawSql === 'string' && this.rawSql != ""
+    }
+
+    clone() {
+        let cloneObj = new CollectionExp();
+        Object.assign(cloneObj, JSON.parse(JSON.stringify(this)));
+        return cloneObj;
+    }
+
+}
+
 // load all collections (excluding the user profile)
 export async function loadCollections(activeId = null) {
     isCollectionsLoading.set(true);
@@ -42,8 +83,39 @@ export async function loadCollections(activeId = null) {
     activeCollection.set({});
     collections.set([]);
 
+
     return ApiClient.collections.getFullList(200, {
         "sort": "+created",
+
+    }).then(async (collections) => {
+        // 拼接collectionsExtend 过滤条件
+        let cids = [];
+        let items = [] // item type is CollectionExp
+
+        collections.forEach((item) => {
+            let collection = new CollectionExp();
+            collection.load(item)
+            items.push(collection)
+
+            cids.push("cid=\"" + item.id + "\"");
+        });
+
+        let recorders = await ApiClient.records.getFullList(
+            "collectionsExtend",
+            200,
+            {"filter": CommonHelper.joinNonEmpty(cids, " || ")}
+        );
+
+        items.forEach((item) => {
+            let exp = CommonHelper.findByKey(recorders, "cid", item.id)
+            if (!CommonHelper.isEmpty(exp) ){
+                item.setExp(exp)
+            }
+
+        });
+
+
+        return items;
     })
         .then((items) => {
             collections.set(items);
@@ -60,9 +132,11 @@ export async function loadCollections(activeId = null) {
                     activeCollection.set(nonProfile);
                 }
             }
+
         })
         .catch((err) => {
             ApiClient.errorResponseHandler(err);
+            console.error(err)
         })
         .finally(() => {
             isCollectionsLoading.set(false);

@@ -7,7 +7,7 @@
     import { errors, setErrors } from "@/stores/errors";
     import { confirm } from "@/stores/confirmation";
     import { addSuccessToast } from "@/stores/toasts";
-    import { addCollection, removeCollection, activeCollection } from "@/stores/collections";
+    import {addCollection, removeCollection, activeCollection, CollectionExp} from "@/stores/collections";
     import tooltip from "@/actions/tooltip";
     import Field from "@/components/base/Field.svelte";
     import Toggler from "@/components/base/Toggler.svelte";
@@ -24,12 +24,12 @@
     let confirmChangesPanel;
 
     let original = null;
-    let collection = new Collection();
-    let collectionExp = new Record();
+    let collection = new CollectionExp();
     let isSaving = false;
     let confirmClose = false; // prevent close recursion
     let activeTab = TAB_FIELDS;
     let initialFormHash = calculateFormHash(collection);
+    let sqlOrDidChanged = false;
 
     $: schemaTabError =
         // extract the direct schema field error, otherwise - return a generic message
@@ -39,7 +39,7 @@
 
     $: isSystemUpdate = !collection.isNew && collection.system;
 
-    $: hasChanges = initialFormHash != calculateFormHash(collection);
+    $: hasChanges = initialFormHash != calculateFormHash(collection) || sqlOrDidChanged;
 
     $: canSave = collection.isNew || hasChanges;
 
@@ -47,8 +47,10 @@
         activeTab = newTab;
     }
 
-    export function show(cmodel,cexpmodel) {
-        load(cmodel,cexpmodel);
+    export function show(cmodel,changeFlag = false) {
+        sqlOrDidChanged = changeFlag;
+
+        load(cmodel);
 
         confirmClose = true;
 
@@ -61,17 +63,14 @@
         return collectionPanel?.hide();
     }
 
-    async function load(cmodel,cexpmodel) {
+    async function load(cmodel) {
         setErrors({}); // reset errors
         if (typeof cmodel !== "undefined") {
             original = cmodel;
             collection = cmodel?.clone();
-            collectionExp = cexpmodel?.clone();
-            console.log(collection)
         } else {
             original = null;
-            collection = new Collection();
-            collectionExp = new Record();
+            collection = new CollectionExp();
         }
         // normalize
         collection.schema = collection.schema || [];
@@ -110,9 +109,12 @@
         }
 
         request.then((result)=>{
-            const data = {cid:result.id,did:collectionExp.did,rawSql:collectionExp.rawSql}
+            const data = {cid:result.id,did:collection?.did,rawSql:collection?.rawSql}
             return ApiClient.records.create("collectionsExtend",data).then(()=>{
-                return result //返回第一次执行的collection
+                let cexp = new CollectionExp()
+                cexp.load(result);
+                cexp.setExp(data);
+                return cexp; //返回最终的collectionExp
             })
         }).then((result) => {
                 confirmClose = false;
@@ -125,7 +127,6 @@
                 if (collection.isNew) {
                     $activeCollection = result;
                 }
-
                 dispatch("save", result);
             })
             .catch((err) => {
@@ -156,12 +157,13 @@
             return; // nothing to delete
         }
 
-        confirm(`Do you really want to delete collection "${original?.name}" and all its records?`, () => {
-            return ApiClient.collections
-                .delete(original?.id)
-                .then(() => {
+        confirm(`Do you really want to delete sql collection "${original?.name}"?`, () => {
+
+            return ApiClient.send("/api/sql-collections/"+original?.id,{
+                'method': 'DELETE',
+            }).then(() => {
                     hide();
-                    addSuccessToast(`Successfully deleted collection "${original?.name}".`);
+                    addSuccessToast(`Successfully deleted sql collection "${original?.name}".`);
                     dispatch("delete", original);
                     removeCollection(original);
                 })
@@ -180,6 +182,7 @@
         bind:this={collectionPanel}
         class="overlay-panel-lg colored-header compact-header collection-panel"
         beforeHide={() => {
+
         if (hasChanges && confirmClose) {
             confirm("You have unsaved changes. Do you really want to close the panel?", () => {
                 confirmClose = false;

@@ -29,6 +29,7 @@ func BindCollectionApi(app core.App, rg *echo.Group) {
 	sqlSubGroup := rg.Group("/sql-collections", ActivityLogger(app), RequireAdminAuth())
 	sqlSubGroup.POST("/excute-sql", api.excuteSql)
 	sqlSubGroup.POST("", api.createSqlCollection)
+	sqlSubGroup.DELETE("/:collection", api.deleteSqlCollection)
 
 }
 
@@ -212,6 +213,32 @@ func (api *collectionApi) delete(c echo.Context) error {
 	return handlerErr
 }
 
+func (api *collectionApi) deleteSqlCollection(c echo.Context) error {
+	collection, err := api.app.Dao().FindCollectionByNameOrId(c.PathParam("collection"))
+	if err != nil || collection == nil {
+		return rest.NewNotFoundError("", err)
+	}
+
+	event := &core.CollectionDeleteEvent{
+		HttpContext: c,
+		Collection:  collection,
+	}
+
+	handlerErr := api.app.OnCollectionBeforeDeleteRequest().Trigger(event, func(e *core.CollectionDeleteEvent) error {
+		if err := api.app.Dao().DeleteSqlCollection(e.Collection); err != nil {
+			return rest.NewBadRequestError("Failed to delete collection. Make sure that the collection is not referenced by other collections.", err)
+		}
+
+		return e.HttpContext.NoContent(http.StatusNoContent)
+	})
+
+	if handlerErr == nil {
+		api.app.OnCollectionAfterDeleteRequest().Trigger(event)
+	}
+
+	return handlerErr
+}
+
 func (api *collectionApi) bulkImport(c echo.Context) error {
 	form := forms.NewCollectionsImport(api.app)
 
@@ -301,7 +328,7 @@ func (api *collectionApi) excuteSql(c echo.Context) error {
 	return c.JSON(http.StatusOK, resultMap)
 }
 
-//convert mysql schema to collection schema
+// convert mysql schema to collection schema
 func convertSchema(name string) string {
 
 	switch name {

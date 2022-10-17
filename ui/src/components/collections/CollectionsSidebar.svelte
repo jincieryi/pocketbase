@@ -5,6 +5,7 @@
     import MountCollectionPanel from "@/components/collections/MountCollectionPanel.svelte";
     import SqlCollectionPanel from "@/components/collections/SqlCollectionPanel.svelte";
 
+
     let collectionPanel;
     let mountCollectionPanel;
     let sqlCollectionPanel;
@@ -22,6 +23,8 @@
                 collection.name.replace(/\s+/g, "").toLowerCase().includes(normalizedSearch))
         );
     });
+
+
 
     function selectCollection(collection) {
         $activeCollection = collection;
@@ -63,6 +66,9 @@
                     <i class="ri-folder-2-line" />
                 {/if}
                 <span class="txt">{collection.name}</span>
+                {#if (collection.isSqlType)}
+                    <small class="label label-info label-sm">SQL</small>
+                {/if}
             </div>
         {:else}
             {#if normalizedSearch.length}

@@ -207,11 +207,14 @@ func LoadCollectionContext(app core.App) echo.MiddlewareFunc {
 	}
 }
 
-//LoadCollectionExpContext 获取CollectionExp信息
+// LoadCollectionExpContext 获取CollectionExp信息
 func LoadCollectionExpContext(app core.App) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			if collection := c.Get(ContextCollectionKey); collection != "" {
+				if collection.(*models.Collection).System == true {
+					return next(c)
+				}
 				collectionExp, _ := app.Dao().FindCollectionExpByNameOrId(collection.(*models.Collection))
 
 				if collectionExp != nil {

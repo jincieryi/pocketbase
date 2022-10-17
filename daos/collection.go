@@ -136,6 +136,24 @@ func (dao *Dao) DeleteCollection(collection *models.Collection) error {
 	})
 }
 
+func (dao *Dao) DeleteSqlCollection(collection *models.Collection) error {
+	if collection.System {
+		return fmt.Errorf("System collection %q cannot be deleted.", collection.Name)
+	}
+
+	result, err := dao.FindCollectionExpByNameOrId(collection)
+	if err != nil {
+		return err
+	}
+
+	return dao.RunInTransaction(func(txDao *Dao) error {
+
+		txDao.DeleteRecord(result) //delete collectionExp
+
+		return txDao.Delete(collection)
+	})
+}
+
 // SaveCollection upserts the provided Collection model and updates
 // its related records table schema.
 func (dao *Dao) SaveCollection(collection *models.Collection) error {

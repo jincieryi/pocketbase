@@ -162,28 +162,30 @@
     <table class="table" class:table-loading={isLoading}>
         <thead>
             <tr>
-                <th class="bulk-select-col min-width">
-                    {#if isLoading}
-                        <span class="loader loader-sm" />
-                    {:else}
-                        <div class="form-field">
-                            <input
-                                type="checkbox"
-                                id="checkbox_0"
-                                disabled={!records.length}
-                                checked={areAllRecordsSelected}
-                                on:change={() => toggleSelectAllRecords()}
-                            />
-                            <label for="checkbox_0" />
+                {#if !collection.isSqlType}
+                    <th class="bulk-select-col min-width">
+                        {#if isLoading}
+                            <span class="loader loader-sm" />
+                        {:else}
+                            <div class="form-field">
+                                <input
+                                    type="checkbox"
+                                    id="checkbox_0"
+                                    disabled={!records.length}
+                                    checked={areAllRecordsSelected}
+                                    on:change={() => toggleSelectAllRecords()}
+                                />
+                                <label for="checkbox_0" />
+                            </div>
+                        {/if}
+                    </th>
+                    <SortHeader class="col-type-text col-field-id" name="id" bind:sort>
+                        <div class="col-header-content">
+                            <i class={CommonHelper.getFieldTypeIcon("primary")} />
+                            <span class="txt">id</span>
                         </div>
-                    {/if}
-                </th>
-                <SortHeader class="col-type-text col-field-id" name="id" bind:sort>
-                    <div class="col-header-content">
-                        <i class={CommonHelper.getFieldTypeIcon("primary")} />
-                        <span class="txt">id</span>
-                    </div>
-                </SortHeader>
+                    </SortHeader>
+                {/if}
                 {#each fields as field (field.name)}
                     <SortHeader
                         class="col-type-{field.type} col-field-{field.name}"
@@ -196,23 +198,25 @@
                         </div>
                     </SortHeader>
                 {/each}
-                <SortHeader class="col-type-date col-field-created" name="created" bind:sort>
-                    <div class="col-header-content">
-                        <i class={CommonHelper.getFieldTypeIcon("date")} />
-                        <span class="txt">created</span>
-                    </div>
-                </SortHeader>
-                <SortHeader class="col-type-date col-field-updated" name="updated" bind:sort>
-                    <div class="col-header-content">
-                        <i class={CommonHelper.getFieldTypeIcon("date")} />
-                        <span class="txt">updated</span>
-                    </div>
-                </SortHeader>
+                {#if !collection.isSqlType}
+                    <SortHeader class="col-type-date col-field-created" name="created" bind:sort>
+                        <div class="col-header-content">
+                            <i class={CommonHelper.getFieldTypeIcon("date")} />
+                            <span class="txt">created</span>
+                        </div>
+                    </SortHeader>
+                    <SortHeader class="col-type-date col-field-updated" name="updated" bind:sort>
+                        <div class="col-header-content">
+                            <i class={CommonHelper.getFieldTypeIcon("date")} />
+                            <span class="txt">updated</span>
+                        </div>
+                    </SortHeader>
+                {/if}
                 <th class="col-type-action min-width" />
             </tr>
         </thead>
         <tbody>
-            {#each records as record (record.id)}
+            {#each records as record,i (collection.isSqlType?i:record.id)}
                 <tr
                     tabindex="0"
                     class="row-handle"
@@ -224,37 +228,42 @@
                         }
                     }}
                 >
-                    <td class="bulk-select-col min-width">
-                        <div class="form-field" on:click|stopPropagation>
-                            <input
-                                type="checkbox"
-                                id="checkbox_{record.id}"
-                                checked={bulkSelected[record.id]}
-                                on:change={() => toggleSelectRecord(record)}
-                            />
-                            <label for="checkbox_{record.id}" />
-                        </div>
-                    </td>
+                    {#if !collection.isSqlType}
+                        <td class="bulk-select-col min-width">
+                            <div class="form-field" on:click|stopPropagation>
+                                <input
+                                    type="checkbox"
+                                    id="checkbox_{record.id}"
+                                    checked={bulkSelected[record.id]}
+                                    on:change={() => toggleSelectRecord(record)}
+                                />
+                                <label for="checkbox_{record.id}" />
+                            </div>
+                        </td>
 
-                    <td class="col-type-text col-field-id">
-                        <IdLabel id={record.id} />
-                    </td>
+                        <td class="col-type-text col-field-id">
+                            <IdLabel id={record.id} />
+                        </td>
+                    {/if}
 
                     {#each fields as field (field.name)}
                         <RecordFieldCell {record} {field} />
                     {/each}
 
-                    <td class="col-type-date col-field-created">
-                        <FormattedDate date={record.created} />
-                    </td>
+                    {#if !collection.isSqlType}
+                        <td class="col-type-date col-field-created">
+                            <FormattedDate date={record.created} />
+                        </td>
 
-                    <td class="col-type-date col-field-updated">
-                        <FormattedDate date={record.updated} />
-                    </td>
+                        <td class="col-type-date col-field-updated">
+                            <FormattedDate date={record.updated} />
+                        </td>
 
-                    <td class="col-type-action min-width">
-                        <i class="ri-arrow-right-line" />
-                    </td>
+                        <td class="col-type-action min-width">
+                            <i class="ri-arrow-right-line" />
+                        </td>
+                    {/if}
+
                 </tr>
             {:else}
                 {#if isLoading}
