@@ -85,7 +85,9 @@
         if (collection.isNew) {
             return save();
         } else {
-            confirmChangesPanel?.show(collection);
+            let c = collection.clone();
+            c.schema = []; //清除 schema 信息
+            confirmChangesPanel?.show(c);
         }
     }
 
@@ -104,18 +106,35 @@
                 'method': 'POST',
                 'body':   data,
             })
-        } else {
-            request = ApiClient.collections.update(collection.id, data);
-        }
 
-        request.then((result)=>{
-            const data = {cid:result.id,did:collection?.did,rawSql:collection?.rawSql}
-            return ApiClient.records.create("collectionsExtend",data).then(()=>{
-                let cexp = new CollectionExp()
-                cexp.load(result);
-                cexp.setExp(data);
-                return cexp; //返回最终的collectionExp
+        } else {
+            request = ApiClient.send("/api/sql-collections/"+collection.id,{
+                'method': 'PATCH',
+                'body':   data,
             })
+        }
+        let collectionResult = null;
+        request.then((result)=>{
+            collectionResult = result;
+            // collectionid 作为 collectionExtend记录id
+            //collectin id == collectionExtend cid == collectionExtend id
+            let tempData = {id:result.id,cid:result.id,did:collection?.did,rawSql:collection?.rawSql}
+            let request2;
+            if(collection.isNew){
+                request2 = ApiClient.records.create("collectionsExtend",tempData);
+            }else{
+                //collectin id == collectionExtend cid == collectionExtend id
+                request2 = ApiClient.records.update("collectionsExtend",result.id,tempData);
+            }
+            return request2;
+        }).then((result)=>{
+
+            let cexp = new CollectionExp()
+            cexp.load(collectionResult);
+            cexp.setExp(result);
+            console.log(cexp);
+            return cexp; //返回最终的collectionExp
+
         }).then((result) => {
                 confirmClose = false;
                 hide();

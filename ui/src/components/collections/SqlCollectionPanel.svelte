@@ -5,7 +5,7 @@
     import CommonHelper from "@/utils/CommonHelper";
     import ApiClient from "@/utils/ApiClient";
     import {setErrors} from "@/stores/errors";
-    import {resetConfirmation,confirm,confirmation} from "@/stores/confirmation";
+    import {confirm} from "@/stores/confirmation";
     import {CollectionExp} from "@/stores/collections";
     import Field from "@/components/base/Field.svelte";
     import OverlayPanel from "@/components/base/OverlayPanel.svelte";
@@ -14,21 +14,14 @@
 
 
 
-    let original = null;
-    let collection = new CollectionExp();
-
-    let selectedDatasource;
-
-    $:{
-        collection.did = selectedDatasource?.id
-    }
-
-
+    const dispatch = createEventDispatcher();
+    let sqlCollectionPanel;
     let sqlConfirmPanel;
-
-
-
-    let excuteErrorMsg = "";
+    let confirmClose = false; // prevent close recursion
+    let collection = new CollectionExp();
+    let initialFormHash = calculateFormHash(collection);
+    let original = null;
+    let executeErrMsg = "";
     let isSearching = false;
     let searchResult = {};
 
@@ -38,13 +31,13 @@
 
 
      function search() {
-        excuteErrorMsg=""
+        executeErrMsg=""
 
         if(!collection?.rawSql || !collection?.did){
-            excuteErrorMsg = "Datasource or sql is invalid";
+            executeErrMsg = "Datasource or sql is invalid";
             return;
         }else{
-            excuteErrorMsg = "";
+            executeErrMsg = "";
         }
 
         isSearching = true;
@@ -60,7 +53,7 @@
                 searchResult = result;
             })
             .catch((err) => {
-                excuteErrorMsg = err
+                executeErrMsg = err
                 isSearching = false;
                 ApiClient.errorResponseHandler(err);
             })
@@ -74,7 +67,7 @@
     function asCollection() {
         search()?.then(
             ()=>{
-                if(excuteErrorMsg){
+                if(executeErrMsg){
                    return
                 }
 
@@ -88,38 +81,18 @@
 
 
 
-    const TAB_FIELDS = "fields";
-    const dispatch = createEventDispatcher();
-
-    let sqlCollectionPanel;
-
-
-
-
-    let isSaving = false;
-    let confirmClose = false; // prevent close recursion
-    let activeTab = TAB_FIELDS;
-    let initialFormHash = calculateFormHash(collection);
-
-
-
     $: isSystemUpdate = !collection.isNew && collection.system;
 
     $: hasChanges = initialFormHash != calculateFormHash(collection);
 
     $: canAsCollection = collection.isNew || hasChanges;
 
-    export function changeTab(newTab) {
-        activeTab = newTab;
-    }
 
     export function show(model) {
 
         load(model);
 
         confirmClose = true;
-
-        changeTab(TAB_FIELDS);
 
         if (collection.isNew) {
             sqlCollectionPanel?.show()
@@ -159,27 +132,9 @@
     }
 
 
-
-    function exportFormData() {
-        const data = collection.export();
-        data.schema = data.schema.slice(0);
-
-        // remove deleted fields
-        for (let i = data.schema.length - 1; i >= 0; i--) {
-            const field = data.schema[i];
-            if (field.toDelete) {
-                data.schema.splice(i, 1);
-            }
-        }
-
-        return data;
-    }
-
-
     function calculateFormHash(m) {
         return JSON.stringify(m);
     }
-
 
 </script>
 
@@ -205,7 +160,6 @@
         <h4>
             {collection.isNew ? "New sqlcollection" : "Edit sqlcollection"}
         </h4>
-
 
 
         <form
@@ -243,8 +197,8 @@
                                 bind:value={collection.rawSql}
 
                         />
-                        {#if  !!excuteErrorMsg}
-                            <div class="help-block help-block-error">{excuteErrorMsg}</div>
+                        {#if  !!executeErrMsg}
+                            <div class="help-block help-block-error">{executeErrMsg}</div>
                         {/if}
                     </Field>
                 </div>

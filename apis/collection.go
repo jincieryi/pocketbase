@@ -30,6 +30,7 @@ func BindCollectionApi(app core.App, rg *echo.Group) {
 	sqlSubGroup.POST("/excute-sql", api.excuteSql)
 	sqlSubGroup.POST("", api.createSqlCollection)
 	sqlSubGroup.DELETE("/:collection", api.deleteSqlCollection)
+	sqlSubGroup.PATCH("/:collection", api.updateSqlCollection)
 
 }
 
@@ -237,6 +238,44 @@ func (api *collectionApi) deleteSqlCollection(c echo.Context) error {
 	}
 
 	return handlerErr
+}
+
+func (api *collectionApi) updateSqlCollection(c echo.Context) error {
+	collection, err := api.app.Dao().FindCollectionByNameOrId(c.PathParam("collection"))
+	if err != nil || collection == nil {
+		return rest.NewNotFoundError("", err)
+	}
+
+	form := forms.NewSqlCollectionUpsert(api.app, collection)
+
+	// load request
+	if err := c.Bind(form); err != nil {
+		return rest.NewBadRequestError("Failed to load the submitted data due to invalid formatting.", err)
+	}
+
+	event := &core.CollectionUpdateEvent{
+		HttpContext: c,
+		Collection:  collection,
+	}
+
+	// update the collection
+	submitErr := form.Submit(func(next forms.InterceptorNextFunc) forms.InterceptorNextFunc {
+		return func() error {
+			return api.app.OnCollectionBeforeUpdateRequest().Trigger(event, func(e *core.CollectionUpdateEvent) error {
+				if err := next(); err != nil {
+					return rest.NewBadRequestError("Failed to update the collection.", err)
+				}
+
+				return e.HttpContext.JSON(http.StatusOK, e.Collection)
+			})
+		}
+	})
+
+	if submitErr == nil {
+		api.app.OnCollectionAfterUpdateRequest().Trigger(event)
+	}
+
+	return submitErr
 }
 
 func (api *collectionApi) bulkImport(c echo.Context) error {
