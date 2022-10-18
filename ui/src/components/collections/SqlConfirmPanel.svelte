@@ -1,5 +1,4 @@
 <script>
-    import {Collection, Record} from "pocketbase";
     import { createEventDispatcher, tick } from "svelte";
     import { scale } from "svelte/transition";
     import CommonHelper from "@/utils/CommonHelper";
